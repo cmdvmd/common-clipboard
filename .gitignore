@@ -132,4 +132,5 @@ dmypy.json
 .idea/
 
 # Project files
-Tests/
+tests/
+constants.py
