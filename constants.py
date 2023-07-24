@@ -1,2 +1,2 @@
 # Port number for communications to occur on
-PORT: int = 
+PORT: int = 3000

@@ -2,8 +2,16 @@ import sys
 import win32clipboard as clipboard
 import time
 import constants
-from socket import socket, AF_INET, SOCK_STREAM, gethostname, gethostbyname
+from enum import Enum
+from log import Log, Tag
+from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
+
+
+class Format(Enum):
+    TEXT = clipboard.CF_UNICODETEXT
+    # IMAGE = clipboard.CF_DIB
+    # FILE = clipboard.CF_HDROP
 
 
 def send_message(message):
@@ -11,17 +19,16 @@ def send_message(message):
 
 
 def get_copied_data():
-    for fmt in formats:
+    for fmt in list(Format):
         try:
             clipboard.OpenClipboard()
-            return clipboard.GetClipboardData(fmt)
+            return clipboard.GetClipboardData(fmt.value)
         except TypeError:
             continue
         finally:
             clipboard.CloseClipboard()
     else:
-        print('Unknown copied data', file=sys.stderr)
-        # raise TypeError('Unknown copied data')
+        log_file.log(Tag.ERROR, 'Unknown data format')
 
 
 def detect_new_copy():
@@ -41,19 +48,16 @@ def listen_for_changes():
         copied_data = client.recv(1024)
 
         clipboard.OpenClipboard()
-        clipboard.SetClipboardData(inverse_formats['Text'], copied_data.decode())
+        clipboard.SetClipboardData(Format.TEXT, copied_data.decode())
         clipboard.CloseClipboard()
 
 
-# formats = {clipboard.CF_UNICODETEXT: 'Text', clipboard.CF_DIB: 'Image'}
-formats = {clipboard.CF_UNICODETEXT: 'Text'}
-inverse_formats = {v: k for k, v in formats.items()}
-
-current_data = get_copied_data()
-client = socket(AF_INET, SOCK_STREAM)
-
 if __name__ == '__main__':
+    current_data = get_copied_data()
+    client = socket(AF_INET, SOCK_STREAM)
     client.connect(('localhost', constants.PORT))
+
+    log_file = Log('client_log.txt')
 
     try:
         listener_thread = Thread(target=listen_for_changes, daemon=True)
