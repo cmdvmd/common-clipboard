@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Universal Clipboard Server</title>
+    </head>
+    <body>
+        <h2>Connected Devices</h2>
+        <ol>
+            {% for name, ip in device_list %}
+            <li>{{name}} ({{ip}})</li>
+            {% endfor %}
+        </ol>
+    </body>
+</html>

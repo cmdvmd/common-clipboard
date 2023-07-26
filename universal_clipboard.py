@@ -14,13 +14,6 @@ class Format(Enum):
     # FILE = clipboard.CF_HDROP
 
 
-@atexit.register
-def disconnect():
-    if server_url:
-        requests.post(server_url + '/remove', json={'ipaddr': ipaddr})
-        log_file.log(Tag.INFO, 'Disconnected from server')
-
-
 def test_server_ip(index):
     global server_url
 
@@ -34,6 +27,26 @@ def test_server_ip(index):
             server_url = tested_url
     except (requests.exceptions.ConnectionError, AssertionError):
         pass
+
+
+def find_server():
+    global server_url
+
+    server_url = ''
+    while not server_url:
+        for i in range(1, 255):
+            test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
+            test_url_thread.start()
+        time.sleep(finding_server_delay)
+
+    log_file.log(Tag.INFO, f'Server found: {server_url}')
+
+
+@atexit.register
+def disconnect():
+    if server_url:
+        requests.post(server_url + '/remove', json={'ipaddr': ipaddr})
+        log_file.log(Tag.INFO, 'Disconnected from server')
 
 
 def get_copied_data():
@@ -56,7 +69,7 @@ def detect_new_copy():
     while True:
         new_data = get_copied_data()
 
-        if new_data != current_data:
+        if server_url and new_data != current_data:
             log_file.log(Tag.INFO, 'New data copied on local machine')
             current_data = new_data
             requests.post(server_url + '/clipboard', json={'data': new_data})
@@ -67,20 +80,24 @@ def listen_for_changes():
     global current_data
 
     while True:
-        data_request = requests.get(server_url + '/clipboard')
+        try:
+            data_request = requests.get(server_url + '/clipboard')
 
-        if data_request.ok:
-            copied_data = data_request.json()['data']
-            if copied_data != current_data:
-                log_file.log(Tag.INFO, 'New clipboard data has been received')
-                current_data = copied_data
-                clipboard.OpenClipboard()
-                clipboard.EmptyClipboard()
-                clipboard.SetClipboardData(Format.TEXT.value, copied_data)
-                clipboard.CloseClipboard()
-        else:
-            log_file.log(Tag.ERROR, 'Invalid response from server')
-        time.sleep(listener_delay)
+            if data_request.ok:
+                copied_data = data_request.json()['data']
+                if copied_data != current_data:
+                    log_file.log(Tag.INFO, 'New clipboard data has been received')
+                    current_data = copied_data
+                    clipboard.OpenClipboard()
+                    clipboard.EmptyClipboard()
+                    clipboard.SetClipboardData(Format.TEXT.value, copied_data)
+                    clipboard.CloseClipboard()
+            else:
+                log_file.log(Tag.ERROR, 'Invalid response from server')
+            time.sleep(listener_delay)
+        except requests.exceptions.ConnectionError:
+            log_file.log(Tag.ERROR, 'Lost connection to server')
+            find_server()
 
 
 if __name__ == '__main__':
@@ -89,22 +106,13 @@ if __name__ == '__main__':
     listener_delay = 0.3
 
     server_url = ''
-
-    log_file = Log('client_log.txt')
-
     ipaddr = gethostbyname(gethostname())
     base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
     current_data = get_copied_data()
+    log_file = Log('client_log.txt')
 
     log_file.log(Tag.INFO, 'Starting search for server')
-
-    while not server_url:
-        for i in range(1, 255):
-            test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
-            test_url_thread.start()
-        time.sleep(finding_server_delay)
-
-    log_file.log(Tag.INFO, f'Server found: {server_url}')
+    find_server()
 
     try:
         listener_thread = Thread(target=listen_for_changes, daemon=True)

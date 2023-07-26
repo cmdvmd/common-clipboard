@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template
 from log import Log, Tag
 
 app = Flask(__name__)
@@ -6,18 +6,7 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
 def show_connected():
-    return render_template_string('''<!doctype html>
-<html>
-    <body>
-        <h2>Connected Devices</h2>
-        <ol>
-            {% for name, ip in device_list %}
-                <li>{{name}} ({{ip}})</li>
-            {% endfor %}
-        </ol>
-    </body>
-</html>
-''', device_list=connected_devices), 200
+    return render_template('index.html', device_list=connected_devices), 200
 
 
 @app.route('/register', methods=['POST'])
@@ -58,6 +47,7 @@ def update_clipboard():
     received_data = request.get_json()
     try:
         clipboard = received_data['data']
+        log_file.log(Tag.INFO, 'Received new clipboard data')
         return '', 204
     except KeyError:
         return 'Missing clipboard data parameter', 400
@@ -73,3 +63,5 @@ if __name__ == '__main__':
     log_file.log(Tag.INFO, 'Server started')
 
     app.run(host='0.0.0.0', port=5000)
+
+    log_file.log(Tag.INFO, 'Server closed')
