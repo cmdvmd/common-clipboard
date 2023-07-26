@@ -1,10 +1,11 @@
-import win32clipboard as clipboard
+import requests
 import time
-import constants
-from enum import Enum
+import win32clipboard as clipboard
+import atexit
 from log import Log, Tag
-from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
+from socket import gethostbyname, gethostname
 from threading import Thread
+from enum import Enum
 
 
 class Format(Enum):
@@ -13,20 +14,26 @@ class Format(Enum):
     # FILE = clipboard.CF_HDROP
 
 
-def find_server():
-    global client
+@atexit.register
+def disconnect():
+    if server_url:
+        requests.post(server_url + '/remove', json={'ipaddr': ipaddr})
+        log_file.log(Tag.INFO, 'Disconnected from server')
 
-    client = socket(AF_INET, SOCK_STREAM)
 
-    # Credit to ninedraft for UDP broadcasting (https://gist.github.com/ninedraft/7c47282f8b53ac015c1e326fffb664b5)
-    with socket(AF_INET, SOCK_DGRAM) as broadcast_client:
-        broadcast_client.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+def test_server_ip(index):
+    global server_url
 
-        broadcast_client.bind(('', constants.BROADCAST_PORT))
-        _, addr = broadcast_client.recvfrom(1024)
+    try:
+        if not server_url:
+            tested_url = f'http://{base_ipaddr}.{index}:{server_port}'
 
-        client.connect((addr[0], constants.PORT))
-        log_file.log(Tag.INFO, f'Connected to server: {addr[0]}')
+            response = requests.post(tested_url + '/register', json={'name': gethostname(), 'ipaddr': ipaddr})
+            assert response.ok
+
+            server_url = tested_url
+    except (requests.exceptions.ConnectionError, AssertionError):
+        pass
 
 
 def get_copied_data():
@@ -34,8 +41,6 @@ def get_copied_data():
         try:
             clipboard.OpenClipboard()
             data = clipboard.GetClipboardData(fmt.value)
-            if fmt == Format.TEXT:
-                data = data.encode()
             return data
         except TypeError:
             continue
@@ -52,39 +57,54 @@ def detect_new_copy():
         new_data = get_copied_data()
 
         if new_data != current_data:
+            log_file.log(Tag.INFO, 'New data copied on local machine')
             current_data = new_data
-            client.sendall(new_data)
-        time.sleep(0.3)
+            requests.post(server_url + '/clipboard', json={'data': new_data})
+        time.sleep(listener_delay)
 
 
 def listen_for_changes():
     global current_data
 
-    try:
-        while True:
-            copied_data = client.recv(1024)
+    while True:
+        data_request = requests.get(server_url + '/clipboard')
 
-            log_file.log(Tag.INFO, 'Received new copy data from server')
-
-            clipboard.OpenClipboard()
-            clipboard.EmptyClipboard()
-            clipboard.SetClipboardData(Format.TEXT.value, copied_data.decode())
-            clipboard.CloseClipboard()
-
-            current_data = copied_data
-    except ConnectionResetError:
-        log_file.log(Tag.ERROR, 'Lost connection to server')
-        client.close()
-        find_server()
+        if data_request.ok:
+            copied_data = data_request.json()['data']
+            if copied_data != current_data:
+                log_file.log(Tag.INFO, 'New clipboard data has been received')
+                current_data = copied_data
+                clipboard.OpenClipboard()
+                clipboard.EmptyClipboard()
+                clipboard.SetClipboardData(Format.TEXT.value, copied_data)
+                clipboard.CloseClipboard()
+        else:
+            log_file.log(Tag.ERROR, 'Invalid response from server')
+        time.sleep(listener_delay)
 
 
 if __name__ == '__main__':
+    server_port = 5000
+    finding_server_delay = 1
+    listener_delay = 0.3
+
+    server_url = ''
+
     log_file = Log('client_log.txt')
 
-    client = socket()
+    ipaddr = gethostbyname(gethostname())
+    base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
     current_data = get_copied_data()
 
-    find_server()
+    log_file.log(Tag.INFO, 'Starting search for server')
+
+    while not server_url:
+        for i in range(1, 255):
+            test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
+            test_url_thread.start()
+        time.sleep(finding_server_delay)
+
+    log_file.log(Tag.INFO, f'Server found: {server_url}')
 
     try:
         listener_thread = Thread(target=listen_for_changes, daemon=True)
@@ -92,5 +112,3 @@ if __name__ == '__main__':
         detect_new_copy()
     except KeyboardInterrupt:
         pass
-    finally:
-        client.close()

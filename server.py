@@ -1,62 +1,75 @@
-import constants
-import time
+from flask import Flask, request, render_template_string
 from log import Log, Tag
-from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
-from threading import Thread
+
+app = Flask(__name__)
 
 
-def handle_connection(conn, addr):
+@app.route('/', methods=['GET'])
+def show_connected():
+    return render_template_string('''<!doctype html>
+<html>
+    <body>
+        <h2>Connected Devices</h2>
+        <ol>
+            {% for name, ip in device_list %}
+                <li>{{name}} ({{ip}})</li>
+            {% endfor %}
+        </ol>
+    </body>
+</html>
+''', device_list=connected_devices), 200
+
+
+@app.route('/register', methods=['POST'])
+def register():
+    device_info = request.get_json()
     try:
-        while True:
-            data = conn.recv(1024)
-            log_file.log(Tag.INFO, f'Received clipboard data from {addr}')
-
-            for i, c in enumerate(clients):
-                if c != conn:
-                    c.sendall(data)
-                    log_file.log(Tag.INFO, f'Sent {addr} data to {c.getpeername()[0]} ({i + 1} of {len(clients) - 1})')
-    except ConnectionResetError:
-        conn.close()
-        clients.remove(conn)
-        log_file.log(Tag.INFO, f'{addr} has disconnected')
+        connected_devices.append((device_info['name'], device_info['ipaddr']))
+        log_file.log(Tag.INFO, f"Registered {device_info['name']}")
+        return '', 204
+    except KeyError:
+        return 'Provided device information is invalid', 400
 
 
-def broadcast_ip():
-    log_file.log(Tag.INFO, 'Server broadcast started')
+@app.route('/remove', methods=['POST'])
+def remove():
+    try:
+        device_ip = request.get_json()['ipaddr']
+        for device in connected_devices:
+            if device[1] == device_ip:
+                connected_devices.remove(device)
+                log_file.log(Tag.INFO, f"Unregistered {device[0]}")
+                return '', 204
+        else:
+            return 'Provided device information is invalid', 400
+    except KeyError:
+        return 'Missing device ipaddr parameter', 400
 
-    # Credit to ninedraft for UDP broadcasting (https://gist.github.com/ninedraft/7c47282f8b53ac015c1e326fffb664b5)
-    with socket(AF_INET, SOCK_DGRAM) as broadcast_server:
-        broadcast_server.settimeout(0.2)
-        broadcast_server.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-        while True:
-            broadcast_server.sendto(b'universal clipboard server broadcast', ('<broadcast>', constants.BROADCAST_PORT))
-            time.sleep(1)
+@app.route('/clipboard', methods=['GET'])
+def get_clipboard():
+    return {'data': clipboard}, 200
+
+
+@app.route('/clipboard', methods=['POST'])
+def update_clipboard():
+    global clipboard
+
+    received_data = request.get_json()
+    try:
+        clipboard = received_data['data']
+        return '', 204
+    except KeyError:
+        return 'Missing clipboard data parameter', 400
 
 
 if __name__ == '__main__':
+    newline = '\n\t'
+
+    clipboard = ''
+    connected_devices = []
+
     log_file = Log('server_log.txt')
     log_file.log(Tag.INFO, 'Server started')
 
-    broadcast_thread = Thread(target=broadcast_ip, daemon=True)
-    broadcast_thread.start()
-
-    server = socket(AF_INET, SOCK_STREAM)
-    server.bind(('', constants.PORT))
-    server.settimeout(3)
-    server.listen()
-
-    clients = []
-
-    with server:
-        while True:
-            try:
-                connection, address = server.accept()
-                clients.append(connection)
-
-                log_file.log(Tag.INFO, f'{address[0]} has connected')
-
-                connection_thread = Thread(target=handle_connection, args=(connection, address[0],), daemon=True)
-                connection_thread.start()
-            except TimeoutError:
-                continue
+    app.run(host='0.0.0.0', port=5000)
