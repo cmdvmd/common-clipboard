@@ -104,12 +104,12 @@ if __name__ == '__main__':
     server_port = 5000
     finding_server_delay = 1
     listener_delay = 0.3
+    log_file = Log('client_log.txt')
 
     server_url = ''
     ipaddr = gethostbyname(gethostname())
     base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
     current_data = get_copied_data()
-    log_file = Log('client_log.txt')
 
     log_file.log(Tag.INFO, 'Starting search for server')
     find_server()
