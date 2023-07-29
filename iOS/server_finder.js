@@ -11,7 +11,7 @@ async function test_server_ip(index) {
     let request = new Request(`http://${tested_url}/register`)
     request.method = 'post'
     request.headers = {'Content-Type': 'application/json'}
-    request.body = JSON.stringify({'name': name, 'ipaddr': ipaddr})
+    request.body = JSON.stringify({'name': name})
     await request.load()
 
     Script.setShortcutOutput(tested_url)

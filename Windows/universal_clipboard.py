@@ -1,11 +1,11 @@
 import requests
 import time
 import win32clipboard as clipboard
-import atexit
 from log import Log, Tag
 from socket import gethostbyname, gethostname
 from threading import Thread
 from enum import Enum
+from infi.systray import SysTrayIcon
 
 
 class Format(Enum):
@@ -21,16 +21,18 @@ def test_server_ip(index):
         if not server_url:
             tested_url = f'http://{base_ipaddr}.{index}:{server_port}'
 
-            response = requests.post(tested_url + '/register', json={'name': gethostname(), 'ipaddr': ipaddr})
+            response = requests.post(tested_url + '/register', json={'name': gethostname()})
             assert response.ok
 
             server_url = tested_url
     except (requests.exceptions.ConnectionError, AssertionError):
-        pass
+        return
 
 
 def find_server():
     global server_url
+
+    systray.update(hover_text='Universal Clipboard: Not Connected')
 
     server_url = ''
     while not server_url:
@@ -39,14 +41,9 @@ def find_server():
             test_url_thread.start()
         time.sleep(finding_server_delay)
 
+    systray.update(hover_text='Universal Clipboard: Not Connected')
+
     log_file.log(Tag.INFO, f'Server found: {server_url}')
-
-
-@atexit.register
-def disconnect():
-    if server_url:
-        requests.post(server_url + '/remove', json={'ipaddr': ipaddr})
-        log_file.log(Tag.INFO, 'Disconnected from server')
 
 
 def get_copied_data():
@@ -80,24 +77,24 @@ def listen_for_changes():
     global current_data
 
     while True:
-        try:
-            data_request = requests.get(server_url + '/clipboard')
-
-            if data_request.ok:
-                copied_data = data_request.json()['data']
-                if copied_data != current_data:
-                    log_file.log(Tag.INFO, 'New clipboard data has been received')
-                    current_data = copied_data
-                    clipboard.OpenClipboard()
-                    clipboard.EmptyClipboard()
-                    clipboard.SetClipboardData(Format.TEXT.value, copied_data)
-                    clipboard.CloseClipboard()
-            else:
-                log_file.log(Tag.ERROR, 'Invalid response from server')
-            time.sleep(listener_delay)
-        except requests.exceptions.ConnectionError:
-            log_file.log(Tag.ERROR, 'Lost connection to server')
-            find_server()
+        if server_url:
+            try:
+                data_request = requests.get(server_url + '/clipboard')
+                if data_request.ok:
+                    copied_data = data_request.json()['data']
+                    if copied_data != current_data:
+                        log_file.log(Tag.INFO, 'New clipboard data has been received')
+                        current_data = copied_data
+                        clipboard.OpenClipboard()
+                        clipboard.EmptyClipboard()
+                        clipboard.SetClipboardData(Format.TEXT.value, copied_data)
+                        clipboard.CloseClipboard()
+                else:
+                    log_file.log(Tag.ERROR, 'Invalid response from server')
+            except requests.exceptions.ConnectionError:
+                log_file.log(Tag.ERROR, 'Lost connection to server')
+                find_server()
+        time.sleep(listener_delay)
 
 
 if __name__ == '__main__':
@@ -111,12 +108,15 @@ if __name__ == '__main__':
     base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
     current_data = get_copied_data()
 
-    log_file.log(Tag.INFO, 'Starting search for server')
-    find_server()
+    systray = SysTrayIcon('static/systray_icon.ico', 'Universal Clipboard')
+    systray.start()
 
-    try:
-        listener_thread = Thread(target=listen_for_changes, daemon=True)
-        listener_thread.start()
-        detect_new_copy()
-    except KeyboardInterrupt:
-        pass
+    log_file.log(Tag.INFO, 'Starting search for server')
+
+    finder_thread = Thread(target=find_server, daemon=True)
+    finder_thread.start()
+
+    listener_thread = Thread(target=listen_for_changes, daemon=True)
+    listener_thread.start()
+    detector_thread = Thread(target=detect_new_copy, daemon=True)
+    detector_thread.start()

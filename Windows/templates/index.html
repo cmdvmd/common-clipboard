@@ -2,13 +2,15 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <link rel="shortcut icon"  href="{{ url_for('static', filename='server_icon.ico') }}">
         <title>Universal Clipboard Server</title>
     </head>
     <body>
-        <h2>Connected Devices</h2>
+        <h1>Connected Devices</h1>
+        <p><b>Note:</b> Changes may take up to 5 seconds to be reflected in this list</p>
         <ol>
-            {% for name, ip in device_list %}
-            <li>{{name}} ({{ip}})</li>
+            {% for ip, device in device_list.items() %}
+                <li>{{device[0]}} ({{ip}})</li>
             {% endfor %}
         </ol>
     </body>
