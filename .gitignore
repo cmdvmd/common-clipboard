@@ -133,6 +133,5 @@ dmypy.json
 
 # Project files
 tests/
-constants.py
 server_log.txt
 client_log.txt
