@@ -74,7 +74,7 @@ if __name__ == '__main__':
     log_file = Log('server_log.txt')
 
     menu_options = (('View Connected Devices', None, lambda _: webbrowser.open(f'http://localhost:{port}')),)
-    systray = SysTrayIcon('static/server_icon.ico', 'Universal Clipboard Server', menu_options,
+    systray = SysTrayIcon('static/server_icon.ico', 'Common Clipboard Server', menu_options,
                           on_quit=lambda _: close_server())
     systray.start()
 

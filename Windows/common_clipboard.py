@@ -25,7 +25,7 @@ def test_server_ip(index):
 def find_server():
     global server_url
 
-    systray.update(hover_text='Universal Clipboard: Not Connected')
+    systray.update(hover_text='Common Clipboard: Not Connected')
 
     server_url = ''
     while not server_url:
@@ -34,7 +34,7 @@ def find_server():
             test_url_thread.start()
         time.sleep(finding_server_delay)
 
-    systray.update(hover_text='Universal Clipboard: Connected')
+    systray.update(hover_text='Common Clipboard: Connected')
     log_file.log(Tag.INFO, f'Server found: {server_url}')
 
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
     current_data = get_copied_data()
 
-    systray = SysTrayIcon('static/systray_icon.ico', 'Universal Clipboard')
+    systray = SysTrayIcon('static/systray_icon.ico', 'Common Clipboard')
     systray.start()
 
     log_file.log(Tag.INFO, 'Starting search for server')
