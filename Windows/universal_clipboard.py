@@ -4,14 +4,7 @@ import win32clipboard as clipboard
 from log import Log, Tag
 from socket import gethostbyname, gethostname
 from threading import Thread
-from enum import Enum
 from infi.systray import SysTrayIcon
-
-
-class Format(Enum):
-    TEXT = clipboard.CF_UNICODETEXT
-    # IMAGE = clipboard.CF_DIB
-    # FILE = clipboard.CF_HDROP
 
 
 def test_server_ip(index):
@@ -41,23 +34,19 @@ def find_server():
             test_url_thread.start()
         time.sleep(finding_server_delay)
 
-    systray.update(hover_text='Universal Clipboard: Not Connected')
-
+    systray.update(hover_text='Universal Clipboard: Connected')
     log_file.log(Tag.INFO, f'Server found: {server_url}')
 
 
 def get_copied_data():
-    for fmt in list(Format):
-        try:
-            clipboard.OpenClipboard()
-            data = clipboard.GetClipboardData(fmt.value)
-            return data
-        except TypeError:
-            continue
-        finally:
-            clipboard.CloseClipboard()
-    else:
-        log_file.log(Tag.ERROR, 'Unknown data format')
+    try:
+        clipboard.OpenClipboard()
+        data = clipboard.GetClipboardData(clipboard.CF_UNICODETEXT)
+        return data
+    except TypeError:
+        log_file.log(Tag.ERROR, 'Invalid copied data format')
+    finally:
+        clipboard.CloseClipboard()
 
 
 def detect_new_copy():
@@ -87,7 +76,7 @@ def listen_for_changes():
                         current_data = copied_data
                         clipboard.OpenClipboard()
                         clipboard.EmptyClipboard()
-                        clipboard.SetClipboardData(Format.TEXT.value, copied_data)
+                        clipboard.SetClipboardData(clipboard.CF_UNICODETEXT, copied_data)
                         clipboard.CloseClipboard()
                 else:
                     log_file.log(Tag.ERROR, 'Invalid response from server')

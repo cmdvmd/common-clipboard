@@ -1,3 +1,5 @@
+// Credit to Airave by thura10
+
 const name = args.shortcutParameter['name']
 const ipaddr = args.shortcutParameter['ipaddr']
 const server_port = args.shortcutParameter['port']
