@@ -4,7 +4,14 @@ import win32clipboard as clipboard
 from log import Log, Tag
 from socket import gethostbyname, gethostname
 from threading import Thread
+from enum import Enum
 from infi.systray import SysTrayIcon
+
+
+class Format(Enum):
+    TEXT = clipboard.CF_TEXT
+    # IMAGE = clipboard.CF_DIB
+    # FILE = clipboard.CF_HDROP
 
 
 def test_server_ip(index):
@@ -39,14 +46,14 @@ def find_server():
 
 
 def get_copied_data():
-    try:
-        clipboard.OpenClipboard()
-        data = clipboard.GetClipboardData(clipboard.CF_UNICODETEXT)
-        return data
-    except TypeError:
-        log_file.log(Tag.ERROR, 'Invalid copied data format')
-    finally:
-        clipboard.CloseClipboard()
+    for fmt in list(Format):
+        if clipboard.IsClipboardFormatAvailable(fmt.value):
+            clipboard.OpenClipboard()
+            data = clipboard.GetClipboardData(fmt.value)
+            clipboard.CloseClipboard()
+            return data
+    else:
+        log_file.log(Tag.ERROR, 'Unknown copied data format')
 
 
 def detect_new_copy():
@@ -58,7 +65,7 @@ def detect_new_copy():
         if server_url and new_data != current_data:
             log_file.log(Tag.INFO, 'New data copied on local machine')
             current_data = new_data
-            requests.post(server_url + '/clipboard', json={'data': new_data})
+            requests.post(server_url + '/clipboard', data=current_data)
         time.sleep(listener_delay)
 
 
@@ -68,16 +75,14 @@ def listen_for_changes():
     while True:
         if server_url:
             try:
-                data_request = requests.get(server_url + '/clipboard')
-                if data_request.ok:
-                    copied_data = data_request.json()['data']
-                    if copied_data != current_data:
-                        log_file.log(Tag.INFO, 'New clipboard data has been received')
-                        current_data = copied_data
-                        clipboard.OpenClipboard()
-                        clipboard.EmptyClipboard()
-                        clipboard.SetClipboardData(clipboard.CF_UNICODETEXT, copied_data)
-                        clipboard.CloseClipboard()
+                data_request = requests.get(server_url + '/clipboard', stream=True)
+                if data_request.ok and data_request.headers['Data-Attached'] == 'True':
+                    log_file.log(Tag.INFO, 'New clipboard data has been received')
+                    current_data = data_request.content
+                    clipboard.OpenClipboard()
+                    clipboard.EmptyClipboard()
+                    clipboard.SetClipboardData(Format.TEXT.value, current_data)
+                    clipboard.CloseClipboard()
                 else:
                     log_file.log(Tag.ERROR, 'Invalid response from server')
             except requests.exceptions.ConnectionError:

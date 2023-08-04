@@ -1,7 +1,7 @@
 import time
 import webbrowser
 from infi.systray import SysTrayIcon
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, make_response
 from log import Log, Tag
 from threading import Thread
 
@@ -12,9 +12,9 @@ app = Flask(__name__)
 def show_connected():
     if request.remote_addr == '127.0.0.1' or request.remote_addr in connected_devices:
         for ip, device in list(connected_devices.items()):
-            if time.time() - device[1] >= 5:
+            if time.time() - device['last active'] >= 5:
                 del connected_devices[ip]
-                log_file.log(Tag.INFO, f'Unregistered {device[0]}')
+                log_file.log(Tag.INFO, f"Unregistered {device['name']}")
         return render_template('index.html', device_list=connected_devices), 200
     else:
         return render_template('restricted.html'), 401
@@ -25,7 +25,11 @@ def register():
     device_info = request.get_json()
     try:
         name = device_info['name']
-        connected_devices.update({request.remote_addr: [name, time.time()]})
+        connected_devices.update({request.remote_addr: {
+            'name': name,
+            'last active': time.time(),
+            'received': False
+        }})
         log_file.log(Tag.INFO, f"Registered {name} ({request.remote_addr})")
         return '', 204
     except KeyError:
@@ -33,10 +37,19 @@ def register():
 
 
 @app.route('/clipboard', methods=['GET'])
-def get_clipboard():
+def send_clipboard():
     try:
-        connected_devices[request.remote_addr][1] = time.time()
-        return {'data': clipboard}, 200
+        connected_devices[request.remote_addr]['last active'] = time.time()
+        if not connected_devices[request.remote_addr]['received']:
+            response = make_response(clipboard)
+            response.headers['Data-Attached'] = 'True'
+            if request.method != 'HEAD':
+                connected_devices[request.remote_addr]['received'] = True
+        else:
+            response = make_response()
+            response.headers['Data-Attached'] = 'False'
+        response.status_code = 200
+        return response
     except KeyError:
         return unregistered_error
 
@@ -45,14 +58,13 @@ def get_clipboard():
 def update_clipboard():
     global clipboard
 
-    received_data = request.get_json()
     try:
-        connected_devices[request.remote_addr][1] = time.time()
-
-        assert 'data' in received_data
-        clipboard = received_data['data']
+        connected_devices[request.remote_addr]['last active'] = time.time()
+        clipboard = request.get_data()
         log_file.log(Tag.INFO,
-                     f'Received new clipboard data from {connected_devices[request.remote_addr][0]} ({request.remote_addr})')
+                     f"Received new clipboard data from {connected_devices[request.remote_addr]['name']} ({request.remote_addr})")
+        for ip in connected_devices:
+            connected_devices[ip]['received'] = False
         return '', 204
     except KeyError:
         return unregistered_error
@@ -66,10 +78,9 @@ def close_server():
 
 if __name__ == '__main__':
     port = 5000
-    newline = '\n\t'
     unregistered_error = 'The requesting device is not registered to the server', 401
 
-    clipboard = ''
+    clipboard = b''
     connected_devices = {}
     log_file = Log('server_log.txt')
 

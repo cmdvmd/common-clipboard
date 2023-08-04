@@ -1,4 +1,4 @@
-// Credit to Airave by thura10
+// Credit to Airwave by thura10
 
 const name = args.shortcutParameter['name']
 const ipaddr = args.shortcutParameter['ipaddr']
@@ -24,4 +24,4 @@ for (let i = 1; i < 255; i++) {
     test_server_ip(i)
 }
 
-Timer.schedule(timeout, false, Script.complete())
+Timer.schedule(timeout, false, Script.complete)

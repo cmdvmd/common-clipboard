@@ -10,7 +10,7 @@
         <p><b>Note:</b> Changes may take up to 5 seconds to be reflected in this list</p>
         <ol>
             {% for ip, device in device_list.items() %}
-                <li>{{device[0]}} ({{ip}})</li>
+                <li>{{device['name']}} ({{ip}})</li>
             {% endfor %}
         </ol>
     </body>
