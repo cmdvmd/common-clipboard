@@ -133,5 +133,3 @@ dmypy.json
 
 # Project files
 tests/
-server_log.txt
-client_log.txt

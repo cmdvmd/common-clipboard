@@ -1,17 +1,25 @@
 import requests
 import time
 import win32clipboard as clipboard
-from log import Log, Tag
 from socket import gethostbyname, gethostname
 from threading import Thread
 from enum import Enum
 from infi.systray import SysTrayIcon
 from io import BytesIO
+from plyer import notification
 
 
 class Format(Enum):
-    TEXT = clipboard.CF_TEXT
+    TEXT = clipboard.CF_UNICODETEXT
     IMAGE = clipboard.RegisterClipboardFormat('PNG')
+
+
+def notify(content):
+    notification.notify(
+        title='Connection Error',
+        message=content,
+        timeout=5
+    )
 
 
 def test_server_ip(index):
@@ -42,7 +50,6 @@ def find_server():
         time.sleep(finding_server_delay)
 
     systray.update(hover_text='Common Clipboard: Connected')
-    log_file.log(Tag.INFO, f'Server found: {server_url}')
 
 
 def get_copied_data():
@@ -53,8 +60,11 @@ def get_copied_data():
             clipboard.CloseClipboard()
             return data, fmt
     else:
-        log_file.log(Tag.ERROR, 'Unknown copied data format')
-        return current_data, current_format
+        notify('Unknown copied data format')
+        try:
+            return current_data, current_format
+        except NameError:
+            return '', Format.TEXT
 
 
 def detect_local_copy():
@@ -63,11 +73,11 @@ def detect_local_copy():
 
     new_data, new_format = get_copied_data()
     if server_url and new_data != current_data:
-        log_file.log(Tag.INFO, 'New data copied on local machine')
         current_data = new_data
         current_format = new_format
+
         file = BytesIO()
-        file.write(current_data)
+        file.write(current_data.encode() if current_format == Format.TEXT else current_data)
         file.seek(0)
         requests.post(server_url + '/clipboard', data=file, headers={'Data-Type': format_to_type[current_format]})
 
@@ -80,16 +90,16 @@ def detect_server_change():
         headers = requests.head(server_url + '/clipboard')
         if headers.ok and headers.headers['Data-Attached'] == 'True':
             data_request = requests.get(server_url + '/clipboard')
-            log_file.log(Tag.INFO, 'New clipboard data has been received')
+            data_format = type_to_format[data_request.headers['Data-Type']]
+            data = data_request.content.decode() if data_format == Format.TEXT else data_request.content
+
             clipboard.OpenClipboard()
             clipboard.EmptyClipboard()
-            clipboard.SetClipboardData(type_to_format[data_request.headers['Data-Type']].value, data_request.content)
+            clipboard.SetClipboardData(data_format.value, data)
             clipboard.CloseClipboard()
             current_data, current_format = get_copied_data()
-        elif not headers.ok:
-            log_file.log(Tag.ERROR, 'Invalid response from server')
     except requests.exceptions.ConnectionError:
-        log_file.log(Tag.ERROR, 'Lost connection to server')
+        notify('Lost connection to Common Clipboard Server')
         find_server()
         time.sleep(listener_delay)
 
@@ -106,7 +116,6 @@ if __name__ == '__main__':
     server_port = 5000
     finding_server_delay = 2
     listener_delay = 0.3
-    log_file = Log('client_log.txt')
 
     server_url = ''
     ipaddr = gethostbyname(gethostname())
@@ -117,10 +126,8 @@ if __name__ == '__main__':
     format_to_type = {Format.TEXT: 'text', Format.IMAGE: 'image'}
     type_to_format = {v: k for k, v in format_to_type.items()}
 
-    systray = SysTrayIcon('static/systray_icon.ico', 'Common Clipboard')
+    systray = SysTrayIcon('static/clipboard_icon.ico', 'Common Clipboard')
     systray.start()
-
-    log_file.log(Tag.INFO, 'Starting search for server')
 
     finder_thread = Thread(target=find_server, daemon=True)
     finder_thread.start()

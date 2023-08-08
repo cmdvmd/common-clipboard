@@ -2,3 +2,4 @@ Flask~=2.3.2
 requests~=2.31.0
 pywin32==306
 infi.systray~=0.1.12
+plyer~=2.1.0

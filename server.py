@@ -2,7 +2,6 @@ import time
 import webbrowser
 from infi.systray import SysTrayIcon
 from flask import Flask, request, render_template, make_response, send_file
-from log import Log, Tag
 from threading import Thread
 from io import BytesIO
 
@@ -15,7 +14,6 @@ def show_connected():
         for ip, device in list(connected_devices.items()):
             if time.time() - device['last active'] >= 5:
                 del connected_devices[ip]
-                log_file.log(Tag.INFO, f"Unregistered {device['name']}")
         return render_template('index.html', device_list=connected_devices), 200
     else:
         return render_template('restricted.html'), 401
@@ -31,7 +29,6 @@ def register():
             'last active': time.time(),
             'received': False
         }})
-        log_file.log(Tag.INFO, f"Registered {name} ({request.remote_addr})")
         return '', 204
     except KeyError:
         return 'Provided device information is invalid', 400
@@ -69,8 +66,6 @@ def update_clipboard():
         assert 'Data-Type' in request.headers, 'Missing data type header'
         clipboard = request.get_data()
         data_type = request.headers['Data-Type']
-        log_file.log(Tag.INFO,
-                     f"Received new clipboard data from {connected_devices[request.remote_addr]['name']} ({request.remote_addr})")
         for ip in connected_devices:
             connected_devices[ip]['received'] = False
         return '', 204
@@ -80,25 +75,17 @@ def update_clipboard():
         return str(e), 400
 
 
-def close_server():
-    log_file.log(Tag.INFO, 'Server closed')
-
-
 if __name__ == '__main__':
     port = 5000
     unregistered_error = 'The requesting device is not registered to the server', 401
 
     clipboard = b''
     data_type = 'text'
-
     connected_devices = {}
-    log_file = Log('server_log.txt')
 
     menu_options = (('View Connected Devices', None, lambda _: webbrowser.open(f'http://localhost:{port}')),)
-    systray = SysTrayIcon('static/server_icon.ico', 'Common Clipboard Server', menu_options,
-                          on_quit=lambda _: close_server())
+    systray = SysTrayIcon('static/server_icon.ico', 'Common Clipboard Server', menu_options)
     systray.start()
 
-    log_file.log(Tag.INFO, 'Server started')
     server_thread = Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': port}, daemon=True)
     server_thread.start()
