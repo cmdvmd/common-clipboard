@@ -14,9 +14,9 @@ class Format(Enum):
     IMAGE = clipboard.RegisterClipboardFormat('PNG')
 
 
-def notify(content):
+def notify(title, content):
     notification.notify(
-        title='Connection Error',
+        title=title,
         message=content,
         timeout=5
     )
@@ -60,7 +60,7 @@ def get_copied_data():
             clipboard.CloseClipboard()
             return data, fmt
     else:
-        notify('Unknown copied data format')
+        notify('Format Error', 'Unknown copied data format')
         try:
             return current_data, current_format
         except NameError:
@@ -99,7 +99,7 @@ def detect_server_change():
             clipboard.CloseClipboard()
             current_data, current_format = get_copied_data()
     except requests.exceptions.ConnectionError:
-        notify('Lost connection to Common Clipboard Server')
+        notify('Connection Error', 'Lost connection to Common Clipboard Server')
         find_server()
         time.sleep(listener_delay)
 
