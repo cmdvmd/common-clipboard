@@ -1,9 +1,10 @@
 import time
 import webbrowser
 from infi.systray import SysTrayIcon
-from flask import Flask, request, render_template, make_response
+from flask import Flask, request, render_template, make_response, send_file
 from log import Log, Tag
 from threading import Thread
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -41,8 +42,12 @@ def send_clipboard():
     try:
         connected_devices[request.remote_addr]['last active'] = time.time()
         if not connected_devices[request.remote_addr]['received']:
-            response = make_response(clipboard)
+            file = BytesIO()
+            file.write(clipboard)
+            file.seek(0)
+            response = make_response(send_file(file, mimetype=data_type))
             response.headers['Data-Attached'] = 'True'
+            response.headers['Data-Type'] = data_type
             if request.method != 'HEAD':
                 connected_devices[request.remote_addr]['received'] = True
         else:
@@ -57,10 +62,13 @@ def send_clipboard():
 @app.route('/clipboard', methods=['POST'])
 def update_clipboard():
     global clipboard
+    global data_type
 
     try:
         connected_devices[request.remote_addr]['last active'] = time.time()
+        assert 'Data-Type' in request.headers, 'Missing data type header'
         clipboard = request.get_data()
+        data_type = request.headers['Data-Type']
         log_file.log(Tag.INFO,
                      f"Received new clipboard data from {connected_devices[request.remote_addr]['name']} ({request.remote_addr})")
         for ip in connected_devices:
@@ -68,8 +76,8 @@ def update_clipboard():
         return '', 204
     except KeyError:
         return unregistered_error
-    except AssertionError:
-        return 'Missing clipboard data parameter', 400
+    except AssertionError as e:
+        return str(e), 400
 
 
 def close_server():
@@ -81,6 +89,8 @@ if __name__ == '__main__':
     unregistered_error = 'The requesting device is not registered to the server', 401
 
     clipboard = b''
+    data_type = 'text'
+
     connected_devices = {}
     log_file = Log('server_log.txt')
 
