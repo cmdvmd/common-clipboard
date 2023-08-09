@@ -14,14 +14,6 @@ class Format(Enum):
     IMAGE = clipboard.RegisterClipboardFormat('PNG')
 
 
-def notify(title, content):
-    notification.notify(
-        title=title,
-        message=content,
-        timeout=5
-    )
-
-
 def test_server_ip(index):
     global server_url
 
@@ -60,7 +52,6 @@ def get_copied_data():
             clipboard.CloseClipboard()
             return data, fmt
     else:
-        notify('Format Error', 'Unknown copied data format')
         try:
             return current_data, current_format
         except NameError:
@@ -99,7 +90,11 @@ def detect_server_change():
             clipboard.CloseClipboard()
             current_data, current_format = get_copied_data()
     except requests.exceptions.ConnectionError:
-        notify('Connection Error', 'Lost connection to Common Clipboard Server')
+        notification.notify(
+            title='Connection Error',
+            message='Lost connection to Common Clipboard Server',
+            timeout=5
+        )
         find_server()
         time.sleep(listener_delay)
 
@@ -126,7 +121,7 @@ if __name__ == '__main__':
     format_to_type = {Format.TEXT: 'text', Format.IMAGE: 'image'}
     type_to_format = {v: k for k, v in format_to_type.items()}
 
-    systray = SysTrayIcon('static/clipboard_icon.ico', 'Common Clipboard')
+    systray = SysTrayIcon('static/systray_icon.ico', 'Common Clipboard')
     systray.start()
 
     finder_thread = Thread(target=find_server, daemon=True)
