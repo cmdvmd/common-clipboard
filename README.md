@@ -1,4 +1,4 @@
-<img src="logo.png" alt="Common Clipboard logo" align="right"/>
+<img src="logo.png" alt="Common Clipboard logo" height align="right"/>
 
 # Common Clipboard
 

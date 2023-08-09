@@ -84,7 +84,7 @@ if __name__ == '__main__':
     connected_devices = {}
 
     menu_options = (('View Connected Devices', None, lambda _: webbrowser.open(f'http://localhost:{port}')),)
-    systray = SysTrayIcon('static/server_icon.ico', 'Common Clipboard Server', menu_options)
+    systray = SysTrayIcon('static/systray_icon.ico', 'Common Clipboard Server', menu_options)
     systray.start()
 
     server_thread = Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': port}, daemon=True)

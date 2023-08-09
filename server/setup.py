@@ -1,33 +1,31 @@
 from cx_Freeze import setup, Executable
 
 setup(
-    name='Common Clipboard',
+    name='Common Clipboard Server',
     author='cmdvmd',
     version='0.1-alpha',
     options={
         'build_exe': {
             'packages': [
                 'setuptools',
-                'requests',
                 'time',
-                'win32clipboard',
-                'socket',
-                'threading',
-                'enum',
+                'webbrowser',
                 'infi.systray',
+                'flask',
+                'threading',
                 'io',
-                'plyer'
             ],
             'include_files': [
-                'static'
+                'static',
+                'templates'
             ]
         }
     },
     executables=[
         Executable(
-            script='common_clipboard.py',
+            script='server.py',
             icon='icon.ico',
-            shortcut_name='Common Clipboard',
+            shortcut_name='Common Clipboard Server',
             shortcut_dir='StartMenuFolder',
             base='Win32GUI'
         )
