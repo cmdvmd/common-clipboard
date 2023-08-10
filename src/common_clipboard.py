@@ -1,12 +1,16 @@
 import requests
 import time
 import win32clipboard as clipboard
+import sys
 from socket import gethostbyname, gethostname
 from threading import Thread
+from multiprocessing import Process
 from enum import Enum
-from infi.systray import SysTrayIcon
+from pystray import Icon, Menu, MenuItem
+from PIL import Image
 from io import BytesIO
 from plyer import notification
+from server import run_server
 
 
 class Format(Enum):
@@ -32,16 +36,12 @@ def test_server_ip(index):
 def find_server():
     global server_url
 
-    systray.update(hover_text='Common Clipboard: Not Connected')
-
     server_url = ''
     while not server_url:
         for i in range(1, 255):
             test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
             test_url_thread.start()
         time.sleep(finding_server_delay)
-
-    systray.update(hover_text='Common Clipboard: Connected')
 
 
 def get_copied_data():
@@ -107,6 +107,26 @@ def listener():
         time.sleep(0.3)
 
 
+def toggle_server():
+    global running_server
+    global server_process
+
+    running_server = not running_server
+    if running_server:
+        server_process = Process(target=run_server, args=(server_port,))
+        server_process.start()
+    else:
+        server_process.terminate()
+        server_process = None
+
+
+def close():
+    if server_process is not None:
+        server_process.terminate()
+    systray.stop()
+    sys.exit(0)
+
+
 if __name__ == '__main__':
     server_port = 5000
     finding_server_delay = 2
@@ -116,13 +136,20 @@ if __name__ == '__main__':
     ipaddr = gethostbyname(gethostname())
     base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
 
+    running_server = False
+    server_process = None
+
     current_data, current_format = get_copied_data()
 
     format_to_type = {Format.TEXT: 'text', Format.IMAGE: 'image'}
     type_to_format = {v: k for k, v in format_to_type.items()}
 
-    systray = SysTrayIcon('static/systray_icon.ico', 'Common Clipboard')
-    systray.start()
+    icon = Image.open('static/systray_icon.ico')
+    systray = Icon('Common Clipboard', icon=icon, title='Common Clipboard', menu=Menu(
+        MenuItem('Run Server', toggle_server, checked=lambda _: running_server),
+        MenuItem('Quit', close),
+    ))
+    systray.run_detached()
 
     finder_thread = Thread(target=find_server, daemon=True)
     finder_thread.start()

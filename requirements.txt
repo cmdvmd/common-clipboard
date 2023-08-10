@@ -1,6 +1,7 @@
 Flask~=2.3.2
 requests~=2.31.0
 pywin32==306
-infi.systray~=0.1.12
+pystray~=0.19.4
+Pillow~=10.0.0
 plyer~=2.1.0
 cx_freeze~=6.15.5

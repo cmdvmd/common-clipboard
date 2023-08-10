@@ -1,8 +1,5 @@
 import time
-import webbrowser
-from infi.systray import SysTrayIcon
 from flask import Flask, request, render_template, make_response, send_file
-from threading import Thread
 from io import BytesIO
 
 app = Flask(__name__)
@@ -14,9 +11,9 @@ def show_connected():
         for ip, device in list(connected_devices.items()):
             if time.time() - device['last active'] >= 5:
                 del connected_devices[ip]
-        return render_template('index.html', device_list=connected_devices), 200
+        return render_template('templates/index.html', device_list=connected_devices), 200
     else:
-        return render_template('restricted.html'), 401
+        return render_template('templates/restricted.html'), 401
 
 
 @app.route('/register', methods=['POST'])
@@ -75,17 +72,12 @@ def update_clipboard():
         return str(e), 400
 
 
-if __name__ == '__main__':
-    port = 5000
-    unregistered_error = 'The requesting device is not registered to the server', 401
+def run_server(port):
+    app.run(host='0.0.0.0', port=port)
 
-    clipboard = b''
-    data_type = 'text'
-    connected_devices = {}
 
-    menu_options = (('View Connected Devices', None, lambda _: webbrowser.open(f'http://localhost:{port}')),)
-    systray = SysTrayIcon('static/systray_icon.ico', 'Common Clipboard Server', menu_options)
-    systray.start()
+unregistered_error = 'The requesting device is not registered to the server', 401
 
-    server_thread = Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': port}, daemon=True)
-    server_thread.start()
+clipboard = b''
+data_type = 'text'
+connected_devices = {}
