@@ -92,6 +92,7 @@ def detect_server_change():
     except requests.exceptions.ConnectionError:
         notification.notify(
             title='Connection Error',
+            app_icon='static/systray_icon.ico',
             message='Lost connection to Common Clipboard Server',
             timeout=5
         )
