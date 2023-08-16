@@ -2,15 +2,19 @@ import requests
 import time
 import win32clipboard as clipboard
 import sys
+import pickle
 from socket import gethostbyname, gethostname
 from threading import Thread
 from multiprocessing import Process
+from multiprocessing.managers import BaseManager
 from enum import Enum
 from pystray import Icon, Menu, MenuItem
 from PIL import Image
 from io import BytesIO
 from plyer import notification
 from server import run_server
+from device_list import DeviceList
+from port_editor import PortEditor
 
 
 class Format(Enum):
@@ -23,7 +27,7 @@ def test_server_ip(index):
 
     try:
         if not server_url:
-            tested_url = f'http://{base_ipaddr}.{index}:{server_port}'
+            tested_url = f'http://{base_ipaddr}.{index}:{port}'
 
             response = requests.post(tested_url + '/register', json={'name': gethostname()})
             assert response.ok
@@ -45,13 +49,16 @@ def find_server():
 
 
 def get_copied_data():
-    for fmt in list(Format):
-        if clipboard.IsClipboardFormatAvailable(fmt.value):
-            clipboard.OpenClipboard()
-            data = clipboard.GetClipboardData(fmt.value)
-            clipboard.CloseClipboard()
-            return data, fmt
-    else:
+    try:
+        for fmt in list(Format):
+            if clipboard.IsClipboardFormatAvailable(fmt.value):
+                clipboard.OpenClipboard()
+                data = clipboard.GetClipboardData(fmt.value)
+                clipboard.CloseClipboard()
+                return data, fmt
+        else:
+            raise BaseException
+    except BaseException:
         try:
             return current_data, current_format
         except NameError:
@@ -92,12 +99,11 @@ def detect_server_change():
     except requests.exceptions.ConnectionError:
         notification.notify(
             title='Connection Error',
-            app_icon='static/systray_icon.ico',
+            app_icon='icon.ico',
             message='Lost connection to Common Clipboard Server',
-            timeout=5
+            timeout=0
         )
         find_server()
-        time.sleep(listener_delay)
 
 
 def listener():
@@ -105,16 +111,19 @@ def listener():
         if server_url:
             detect_local_copy()
             detect_server_change()
-        time.sleep(0.3)
+        systray.update_menu()
+        time.sleep(listener_delay)
 
 
-def toggle_server():
+def start_server(toggle_variable=False):
     global running_server
     global server_process
 
-    running_server = not running_server
+    if toggle_variable:
+        running_server = not running_server
+
     if running_server:
-        server_process = Process(target=run_server, args=(server_port,))
+        server_process = Process(target=run_server, args=(port, connected_devices,))
         server_process.start()
     else:
         server_process.terminate()
@@ -124,12 +133,36 @@ def toggle_server():
 def close():
     if server_process is not None:
         server_process.terminate()
+    with open(preferences_file, 'wb') as save_file:
+        pickle.dump([port, running_server], save_file)
     systray.stop()
     sys.exit(0)
 
 
+def edit_port():
+    global port
+
+    port_dialog = PortEditor(port)
+    if port_dialog.applied:
+        port = int(port_dialog.port_number.get())
+        if running_server and server_process is not None:
+            server_process.terminate()
+            start_server()
+
+
+def get_menu_items():
+    menu_items = (
+        MenuItem(f'Port: {port}', Menu(MenuItem('Edit', lambda _: edit_port()))),
+        MenuItem('Run Server', lambda: start_server(True), checked=lambda _: running_server),
+        MenuItem('View Connected Devices', Menu(lambda: (
+            MenuItem(f"{name} ({ip})", None) for ip, name in connected_devices.get_devices()
+        ))) if running_server else None,
+        MenuItem('Quit', close),
+    )
+    return (item for item in menu_items if item is not None)
+
+
 if __name__ == '__main__':
-    server_port = 5000
     finding_server_delay = 2
     listener_delay = 0.3
 
@@ -137,19 +170,30 @@ if __name__ == '__main__':
     ipaddr = gethostbyname(gethostname())
     base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
 
-    running_server = False
-    server_process = None
+    BaseManager.register('DeviceList', DeviceList)
+    manager = BaseManager()
+    manager.start()
+    connected_devices = manager.DeviceList()
+
+    server_process: Process = None
+
+    preferences_file = 'preferences.pickle'
+    try:
+        with open(preferences_file, 'rb') as preferences:
+            port, running_server = pickle.load(preferences)
+        if running_server:
+            start_server()
+    except FileNotFoundError:
+        port = 5000
+        running_server = False
 
     current_data, current_format = get_copied_data()
 
     format_to_type = {Format.TEXT: 'text', Format.IMAGE: 'image'}
     type_to_format = {v: k for k, v in format_to_type.items()}
 
-    icon = Image.open('static/systray_icon.ico')
-    systray = Icon('Common Clipboard', icon=icon, title='Common Clipboard', menu=Menu(
-        MenuItem('Run Server', toggle_server, checked=lambda _: running_server),
-        MenuItem('Quit', close),
-    ))
+    icon = Image.open('icon.ico')
+    systray = Icon('Common Clipboard', icon=icon, title='Common Clipboard', menu=Menu(get_menu_items))
     systray.run_detached()
 
     finder_thread = Thread(target=find_server, daemon=True)
