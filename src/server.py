@@ -1,41 +1,25 @@
-import time
-from flask import Flask, request, render_template, make_response, send_file
+from flask import Flask, request, make_response, send_file
 from io import BytesIO
+from device_list import DeviceList
 
 app = Flask(__name__)
-
-
-@app.route('/', methods=['GET'])
-def show_connected():
-    if request.remote_addr == '127.0.0.1' or request.remote_addr in connected_devices:
-        for ip, device in list(connected_devices.items()):
-            if time.time() - device['last active'] >= 5:
-                del connected_devices[ip]
-        return render_template('templates/index.html', device_list=connected_devices), 200
-    else:
-        return render_template('templates/restricted.html'), 401
 
 
 @app.route('/register', methods=['POST'])
 def register():
     device_info = request.get_json()
     try:
-        name = device_info['name']
-        connected_devices.update({request.remote_addr: {
-            'name': name,
-            'last active': time.time(),
-            'received': False
-        }})
+        connected_devices.add_device(request.remote_addr, device_info['name'])
         return '', 204
     except KeyError:
         return 'Provided device information is invalid', 400
 
 
-@app.route('/clipboard', methods=['GET'])
+@app.route('/clipboard', methods=['GET', 'HEAD'])
 def send_clipboard():
     try:
-        connected_devices[request.remote_addr]['last active'] = time.time()
-        if not connected_devices[request.remote_addr]['received']:
+        connected_devices.update_activity(request.remote_addr)
+        if not connected_devices.get_received(request.remote_addr):
             file = BytesIO()
             file.write(clipboard)
             file.seek(0)
@@ -43,7 +27,7 @@ def send_clipboard():
             response.headers['Data-Attached'] = 'True'
             response.headers['Data-Type'] = data_type
             if request.method != 'HEAD':
-                connected_devices[request.remote_addr]['received'] = True
+                connected_devices.set_received(request.remote_addr, True)
         else:
             response = make_response()
             response.headers['Data-Attached'] = 'False'
@@ -59,12 +43,12 @@ def update_clipboard():
     global data_type
 
     try:
-        connected_devices[request.remote_addr]['last active'] = time.time()
+        connected_devices.update_activity(request.remote_addr)
         assert 'Data-Type' in request.headers, 'Missing data type header'
         clipboard = request.get_data()
         data_type = request.headers['Data-Type']
-        for ip in connected_devices:
-            connected_devices[ip]['received'] = False
+        for ip, _ in connected_devices.get_devices():
+            connected_devices.set_received(ip, ip == request.remote_addr)
         return '', 204
     except KeyError:
         return unregistered_error
@@ -72,7 +56,10 @@ def update_clipboard():
         return str(e), 400
 
 
-def run_server(port):
+def run_server(port, device_list):
+    global connected_devices
+
+    connected_devices = device_list
     app.run(host='0.0.0.0', port=port)
 
 
@@ -80,4 +67,4 @@ unregistered_error = 'The requesting device is not registered to the server', 40
 
 clipboard = b''
 data_type = 'text'
-connected_devices = {}
+connected_devices = DeviceList()

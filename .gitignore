@@ -133,3 +133,4 @@ dmypy.json
 
 # Project files
 tests/
+*.pickle
