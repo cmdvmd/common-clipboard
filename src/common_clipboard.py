@@ -11,7 +11,6 @@ from enum import Enum
 from pystray import Icon, Menu, MenuItem
 from PIL import Image
 from io import BytesIO
-from plyer import notification
 from server import run_server
 from device_list import DeviceList
 from port_editor import PortEditor
@@ -40,21 +39,14 @@ def test_server_ip(index):
 def find_server():
     global server_url
 
-    notified = not server_url
+    systray.title = 'Common Clipboard: Not Connected'
     server_url = ''
     while run_app and not server_url:
         for i in range(1, 255):
             test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
             test_url_thread.start()
         time.sleep(finding_server_delay)
-        if not server_url and not notified:
-            notification.notify(
-                title='Connection Error',
-                app_icon='icon.ico',
-                message='Lost connection to Common Clipboard Server',
-                timeout=0
-            )
-            notified = True
+    systray.title = 'Common Clipboard: Connected'
 
 
 def get_copied_data():
@@ -185,11 +177,12 @@ if __name__ == '__main__':
     try:
         with open(preferences_file, 'rb') as preferences:
             port, running_server = pickle.load(preferences)
-        if running_server:
-            start_server()
     except FileNotFoundError:
         port = 5000
         running_server = False
+
+    if running_server:
+        start_server()
 
     current_data, current_format = get_copied_data()
 
