@@ -53,7 +53,7 @@ and all the data transfer happens in the background, meaning the only commands y
 4. On the device running the server, the names and local IPv4 addresses of all connected devices can be viewed from the
    system tray
 
-   ![Viewing Connected Devices Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/connected.png)
+   ![Viewing Connected Devices Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/view_connected.png)
 
 5. To quit the Common Clipboard application, use the "Quit" option in the system tray
 
