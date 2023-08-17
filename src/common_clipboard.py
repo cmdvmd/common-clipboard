@@ -40,25 +40,31 @@ def test_server_ip(index):
 def find_server():
     global server_url
 
+    notified = not server_url
     server_url = ''
-    while not server_url:
+    while run_app and not server_url:
         for i in range(1, 255):
             test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
             test_url_thread.start()
         time.sleep(finding_server_delay)
+        if not server_url and not notified:
+            notification.notify(
+                title='Connection Error',
+                app_icon='icon.ico',
+                message='Lost connection to Common Clipboard Server',
+                timeout=0
+            )
+            notified = True
 
 
 def get_copied_data():
-    try:
-        for fmt in list(Format):
-            if clipboard.IsClipboardFormatAvailable(fmt.value):
-                clipboard.OpenClipboard()
-                data = clipboard.GetClipboardData(fmt.value)
-                clipboard.CloseClipboard()
-                return data, fmt
-        else:
-            raise BaseException
-    except BaseException:
+    for fmt in list(Format):
+        if clipboard.IsClipboardFormatAvailable(fmt.value):
+            clipboard.OpenClipboard()
+            data = clipboard.GetClipboardData(fmt.value)
+            clipboard.CloseClipboard()
+            return data, fmt
+    else:
         try:
             return current_data, current_format
         except NameError:
@@ -97,17 +103,11 @@ def detect_server_change():
             clipboard.CloseClipboard()
             current_data, current_format = get_copied_data()
     except requests.exceptions.ConnectionError:
-        notification.notify(
-            title='Connection Error',
-            app_icon='icon.ico',
-            message='Lost connection to Common Clipboard Server',
-            timeout=0
-        )
         find_server()
 
 
 def listener():
-    while True:
+    while run_app:
         if server_url:
             detect_local_copy()
             detect_server_change()
@@ -131,6 +131,9 @@ def start_server(toggle_variable=False):
 
 
 def close():
+    global run_app
+
+    run_app = False
     if server_process is not None:
         server_process.terminate()
     with open(preferences_file, 'wb') as save_file:
@@ -143,8 +146,9 @@ def edit_port():
     global port
 
     port_dialog = PortEditor(port)
-    if port_dialog.applied:
-        port = int(port_dialog.port_number.get())
+    new_port = port_dialog.port_number.get()
+    if port_dialog.applied and new_port != port:
+        port = new_port
         if running_server and server_process is not None:
             server_process.terminate()
             start_server()
@@ -163,7 +167,7 @@ def get_menu_items():
 
 
 if __name__ == '__main__':
-    finding_server_delay = 2
+    finding_server_delay = 1
     listener_delay = 0.3
 
     server_url = ''
@@ -196,8 +200,7 @@ if __name__ == '__main__':
     systray = Icon('Common Clipboard', icon=icon, title='Common Clipboard', menu=Menu(get_menu_items))
     systray.run_detached()
 
-    finder_thread = Thread(target=find_server, daemon=True)
-    finder_thread.start()
+    run_app = True
 
-    listener_thread = Thread(target=listener, daemon=True)
-    listener_thread.start()
+    find_server()
+    listener()
