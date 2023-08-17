@@ -12,6 +12,7 @@ class PortEditor:
         self.root.iconbitmap('icon.ico')
         self.root.geometry('250x75')
         self.root.resizable(False, False)
+        self.root.bind('<Return>', lambda _: self.apply_port_number())
 
         self.port_label = ttk.Label(self.root, text='Enter a port number:', font=('Arial', 11))
         self.port_label.pack(side=tkinter.TOP, padx=5, pady=5, fill=tkinter.X)

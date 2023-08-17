@@ -1,4 +1,4 @@
-<img src="logo.png" alt="Common Clipboard logo" height align="right"/>
+<img src="https://github.com/cmdvmd/common-clipboard/blob/main/logo.png" alt="Common Clipboard logo" height align="right"/>
 
 # Common Clipboard
 
@@ -42,22 +42,22 @@ and all the data transfer happens in the background, meaning the only commands y
 2. Run the server on only **ONE** device on the local network from the system tray
     * The server **MUST** be running in order for clipboard data transfer to occur between devices
 
-   ![Running Server Demo](static/run_server.gif)
+   ![Running Server Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/run_server.gif)
 
 3. Edit the port number from the system tray to match the port number of the server (if necessary). The port number can
    also be changed while the server is running
     * Changing the port number is likely only necessary if multiple users are using Common Clipboard on the same network
 
-   ![Editing Port Demo](static/edit_port.gif)
+   ![Editing Port Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/edit_port.gif)
 
 4. On the device running the server, the names and local IPv4 addresses of all connected devices can be viewed from the
    system tray
 
-   ![Viewing Connected Devices Demo](static/view_connected.png)
+   ![Viewing Connected Devices Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/connected.png)
 
 5. To quit the Common Clipboard application, use the "Quit" option in the system tray
 
-   ![Quitting Demo](static/quit.png)
+   ![Quitting Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/quit.png)
 
 ## Installation
 
