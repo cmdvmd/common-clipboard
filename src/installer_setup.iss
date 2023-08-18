@@ -26,7 +26,7 @@ LicenseFile=..\LICENSE
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 OutputDir=build
-OutputBaseFilename=common_clipboard_installer   
+OutputBaseFilename=common_clipboard_installer-{#MyAppVersion}   
 SetupIconFile=..\static\installer_icon.ico
 Compression=lzma
 SolidCompression=yes
