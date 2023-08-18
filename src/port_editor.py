@@ -1,3 +1,7 @@
+"""
+GUI to edit the current port the application is running on
+"""
+
 import tkinter
 from tkinter import ttk
 from tkinter import messagebox
@@ -9,7 +13,7 @@ class PortEditor:
 
         self.root = tkinter.Tk()
         self.root.title('Edit Port')
-        self.root.iconbitmap('icon.ico')
+        self.root.iconbitmap('systray_icon.ico')
         self.root.geometry('250x75')
         self.root.resizable(False, False)
         self.root.bind('<Return>', lambda _: self.apply_port_number())

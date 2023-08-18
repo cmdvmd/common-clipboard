@@ -1,3 +1,7 @@
+"""
+Main file for application
+"""
+
 import requests
 import time
 import win32clipboard as clipboard
@@ -5,7 +9,7 @@ import sys
 import pickle
 from socket import gethostbyname, gethostname
 from threading import Thread
-from multiprocessing import Process
+from multiprocessing import Process, freeze_support
 from multiprocessing.managers import BaseManager
 from enum import Enum
 from pystray import Icon, Menu, MenuItem
@@ -50,13 +54,16 @@ def find_server():
 
 
 def get_copied_data():
-    for fmt in list(Format):
-        if clipboard.IsClipboardFormatAvailable(fmt.value):
-            clipboard.OpenClipboard()
-            data = clipboard.GetClipboardData(fmt.value)
-            clipboard.CloseClipboard()
-            return data, fmt
-    else:
+    try:
+        for fmt in list(Format):
+            if clipboard.IsClipboardFormatAvailable(fmt.value):
+                clipboard.OpenClipboard()
+                data = clipboard.GetClipboardData(fmt.value)
+                clipboard.CloseClipboard()
+                return data, fmt
+        else:
+            raise BaseException
+    except BaseException:
         try:
             return current_data, current_format
         except NameError:
@@ -159,6 +166,8 @@ def get_menu_items():
 
 
 if __name__ == '__main__':
+    freeze_support()
+
     finding_server_delay = 1
     listener_delay = 0.3
 
@@ -189,7 +198,7 @@ if __name__ == '__main__':
     format_to_type = {Format.TEXT: 'text', Format.IMAGE: 'image'}
     type_to_format = {v: k for k, v in format_to_type.items()}
 
-    icon = Image.open('icon.ico')
+    icon = Image.open('systray_icon.ico')
     systray = Icon('Common Clipboard', icon=icon, title='Common Clipboard', menu=Menu(get_menu_items))
     systray.run_detached()
 

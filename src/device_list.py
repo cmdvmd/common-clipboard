@@ -1,3 +1,7 @@
+"""
+Class to keep track of connected devices
+"""
+
 import time
 
 

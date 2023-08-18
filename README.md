@@ -1,4 +1,4 @@
-<img src="https://github.com/cmdvmd/common-clipboard/blob/main/logo.png" alt="Common Clipboard logo" height align="right"/>
+<img src="https://github.com/cmdvmd/common-clipboard/blob/main/static/logo.png" alt="Common Clipboard logo" height align="right"/>
 
 # Common Clipboard
 

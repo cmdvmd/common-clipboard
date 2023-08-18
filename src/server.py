@@ -1,3 +1,7 @@
+"""
+File to handle server operations
+"""
+
 from flask import Flask, request, make_response, send_file
 from io import BytesIO
 from device_list import DeviceList
