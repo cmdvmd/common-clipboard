@@ -1,4 +1,4 @@
-<img src="https://github.com/cmdvmd/common-clipboard/blob/main/static/logo.png" alt="Common Clipboard logo" height align="right"/>
+<img src="static/logo.png" alt="Common Clipboard logo" height align="right"/>
 
 # Common Clipboard
 
@@ -42,34 +42,33 @@ and all the data transfer happens in the background, meaning the only commands y
 2. Run the server on only **ONE** device on the local network from the system tray
     * The server **MUST** be running in order for clipboard data transfer to occur between devices
 
-   ![Running Server Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/run_server.gif)
+   ![Running Server Demo](static/run_server.gif)
 
 3. Edit the port number from the system tray to match the port number of the server (if necessary). The port number can
    also be changed while the server is running
     * Changing the port number is likely only necessary if multiple users are using Common Clipboard on the same network
 
-   ![Editing Port Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/edit_port.gif)
+   ![Editing Port Demo](static/edit_port.gif)
 
 4. To view whether the current device is connected to the Common Clipboard server, hover over the icon in the system
    tray
 
-   ![Viewing if Connected to Server Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/connection_status.png)
+   ![Viewing if Connected to Server Demo](static/connection_status.png)
 
 5. On the device running the server, the names and local IPv4 addresses of all connected devices can be viewed from the
    system tray
 
-   ![Viewing Connected Devices Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/view_connected.png)
+   ![Viewing Connected Devices Demo](static/view_connected.png)
 
 6. To quit the Common Clipboard application, use the "Quit" option in the system tray
 
-   ![Quitting Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/quit.png)
+   ![Quitting Demo](static/quit.png)
 
 ## Installation
 
 ### Windows
 
-Download the latest version of the Common Clipboard and Common Clipboard Server applications
-from [releases](https://github.com/cmdvmd/common-clipboard/releases)
+Download the latest version of the Common Clipboard application from [releases](https://github.com/cmdvmd/common-clipboard/releases)
 
 ### iOS
 
