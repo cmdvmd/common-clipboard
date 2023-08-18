@@ -50,12 +50,17 @@ and all the data transfer happens in the background, meaning the only commands y
 
    ![Editing Port Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/edit_port.gif)
 
-4. On the device running the server, the names and local IPv4 addresses of all connected devices can be viewed from the
+4. To view whether the current device is connected to the Common Clipboard server, hover over the icon in the system
+   tray
+
+   ![Viewing if Connected to Server Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/connection_status.png)
+
+5. On the device running the server, the names and local IPv4 addresses of all connected devices can be viewed from the
    system tray
 
    ![Viewing Connected Devices Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/view_connected.png)
 
-5. To quit the Common Clipboard application, use the "Quit" option in the system tray
+6. To quit the Common Clipboard application, use the "Quit" option in the system tray
 
    ![Quitting Demo](https://github.com/cmdvmd/common-clipboard/blob/main/static/quit.png)
 

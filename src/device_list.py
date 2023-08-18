@@ -25,6 +25,9 @@ class DeviceList:
             'received': False
         }})
 
+    def clear(self):
+        self._devices.clear()
+
     def update_activity(self, ip):
         self._devices[ip]['last active'] = time.time()
 

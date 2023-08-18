@@ -6,6 +6,7 @@ import requests
 import time
 import win32clipboard as clipboard
 import sys
+import os
 import pickle
 from socket import gethostbyname, gethostname
 from threading import Thread
@@ -135,8 +136,12 @@ def close():
     run_app = False
     if server_process is not None:
         server_process.terminate()
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
     with open(preferences_file, 'wb') as save_file:
         pickle.dump([port, running_server], save_file)
+
     systray.stop()
     sys.exit(0)
 
@@ -150,6 +155,7 @@ def edit_port():
         port = new_port
         if running_server and server_process is not None:
             server_process.terminate()
+            connected_devices.clear()
             start_server()
 
 
@@ -182,7 +188,8 @@ if __name__ == '__main__':
 
     server_process: Process = None
 
-    preferences_file = 'preferences.pickle'
+    data_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'CommonClipboard')
+    preferences_file = os.path.join(data_dir, 'preferences.pickle')
     try:
         with open(preferences_file, 'rb') as preferences:
             port, running_server = pickle.load(preferences)

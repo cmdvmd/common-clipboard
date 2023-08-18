@@ -2,26 +2,6 @@ import sys
 from cx_Freeze import setup, Executable
 
 
-def generate_shortcut_table(shortcuts):
-    table = []
-    for location in shortcuts:
-        table.append((
-            f'{location}Shortcut',
-            f'{location}Folder',
-            'Common Clipboard',
-            'TARGETDIR',
-            '[TARGETDIR]common_clipboard.exe',
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            'TARGETDIR'
-        ))
-    return table
-
-
 if __name__ == '__main__':
     setup(
         name='common_clipboard',
@@ -36,6 +16,7 @@ if __name__ == '__main__':
                     'time',
                     'win32clipboard',
                     'sys',
+                    'os',
                     'pickle',
                     'socket',
                     'threading',
@@ -64,11 +45,6 @@ if __name__ == '__main__':
                     'systray_icon.ico'
                 ],
                 'optimize': 2
-            },
-            'bdist_msi': {
-                'data': {
-                    'Shortcut': generate_shortcut_table(['Desktop', 'StartMenu', 'Startup'])
-                }
             }
         },
         executables=[
