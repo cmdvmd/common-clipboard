@@ -6,13 +6,14 @@ import time
 
 
 class DeviceList:
-    def __init__(self):
+    def __init__(self, timeout=10):
         self._devices = {}
+        self.timeout = timeout
 
     def get_devices(self):
         device_list = []
         for ip, device in list(self._devices.items()):
-            if time.time() - device['last active'] > 5:
+            if time.time() - device['last active'] > self.timeout:
                 del self._devices[ip]
             else:
                 device_list.append((ip, device['name']))
