@@ -43,20 +43,24 @@ def test_server_ip(index):
 
 def find_server():
     global server_url
+    global running_server
 
     systray.title = f'{app_name}: Not Connected'
+    start_server()
 
     server_url = ''
     test_url_thread = None
     for i in range(1, 255):
-        test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
-        test_url_thread.start()
+        if i != device_index:
+            test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
+            test_url_thread.start()
     test_url_thread.join()
 
     if server_url:
+        running_server = False
+        server_process.terminate()
         systray.title = f'{app_name}: Connected'
     else:
-        start_server()
         test_server_ip(device_index)
         systray.title = f'{app_name}: Server Running'
 
@@ -182,7 +186,7 @@ if __name__ == '__main__':
     server_url = ''
     ipaddr = gethostbyname(gethostname()).split('.')
     base_ipaddr = '.'.join(ipaddr[:-1])
-    device_index = ipaddr[-1]
+    device_index = int(ipaddr[-1])
 
     BaseManager.register('DeviceList', DeviceList)
     manager = BaseManager()
