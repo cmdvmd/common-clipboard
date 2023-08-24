@@ -118,7 +118,7 @@ def mainloop():
         try:
             detect_local_copy()
             detect_server_change()
-        except (requests.exceptions.ConnectionError, ConnectionRefusedError):
+        except (requests.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError):
             systray.title = f'{app_name}: Not Connected'
             if run_app:
                 find_server()
@@ -133,6 +133,7 @@ def start_server():
     if server_process is not None:
         server_process.terminate()
 
+    connected_devices.clear()
     running_server = True
     server_process = Process(target=run_server, args=(port, connected_devices, server_timestamp,))
     server_process.start()
@@ -159,7 +160,6 @@ def edit_port():
     new_port = port_dialog.port_number.get()
     if port_dialog.applied and new_port != port:
         port = new_port
-        connected_devices.clear()
         find_server()
 
 
