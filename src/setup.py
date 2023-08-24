@@ -7,7 +7,7 @@ if __name__ == '__main__':
         name='common_clipboard',
         description='Common Clipboard',
         author='cmdvmd',
-        version='1.0b0',
+        version='1.1b0',
         options={
             'build_exe': {
                 'packages': [
@@ -25,6 +25,7 @@ if __name__ == '__main__':
                     'pystray',
                     'PIL',
                     'io',
+                    'ntplib',
                     'flask',
                     'tkinter'
                 ],
@@ -52,9 +53,7 @@ if __name__ == '__main__':
                 script='common_clipboard.py',
                 icon='../static/icon.ico',
                 copyright='Copyright (c) cmdvmd 2023',
-                base='Win32GUI' if sys.platform == 'win32' else None,
-                shortcut_name='Common Clipboard',
-                shortcut_dir=''
+                base='Win32GUI' if sys.platform == 'win32' else None
             )
         ]
     )

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Common Clipboard"
-#define MyAppVersion "1.0b0"
+#define MyAppVersion "1.1b0"
 #define MyAppPublisher "cmdvmd"
 #define MyAppURL "https://github.com/cmdvmd/common-clipboard"
 #define MyAppExeName "common_clipboard.exe"
@@ -24,7 +24,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
-;PrivilegesRequired=lowest
+; PrivilegesRequired=lowest
 OutputDir=build
 OutputBaseFilename=common_clipboard_installer-{#MyAppVersion}   
 SetupIconFile=..\static\installer_icon.ico
@@ -33,7 +33,7 @@ SolidCompression=yes
 WizardStyle=modern
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{localappdata}\CommonClipboard"
+Type: filesandordirs; Name: "{localappdata}\Common Clipboard"
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

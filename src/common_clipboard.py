@@ -159,9 +159,8 @@ def edit_port():
     new_port = port_dialog.port_number.get()
     if port_dialog.applied and new_port != port:
         port = new_port
-        if running_server:
-            connected_devices.clear()
-            start_server()
+        connected_devices.clear()
+        find_server()
 
 
 def get_menu_items():
