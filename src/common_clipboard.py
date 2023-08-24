@@ -10,7 +10,7 @@ import os
 import pickle
 from socket import gethostbyname, gethostname
 from threading import Thread
-from multiprocessing import Process, freeze_support
+from multiprocessing import freeze_support, Value, Process
 from multiprocessing.managers import BaseManager
 from enum import Enum
 from pystray import Icon, Menu, MenuItem
@@ -26,32 +26,41 @@ class Format(Enum):
     IMAGE = clipboard.RegisterClipboardFormat('PNG')
 
 
-def test_server_ip(index):
+def register(index):
     global server_url
 
+    server_url = f'http://{base_ipaddr}.{index}:{port}'
+    requests.post(server_url + '/register', json={'name': gethostname()})
+
+
+def test_server_ip(index):
+    global server_url
+    global running_server
+
     try:
-        if not server_url:
-            tested_url = f'http://{base_ipaddr}.{index}:{port}'
-
-            response = requests.post(tested_url + '/register', json={'name': gethostname()})
-            assert response.ok
-
-            server_url = tested_url
+        tested_url = f'http://{base_ipaddr}.{index}:{port}'
+        response = requests.get(tested_url + '/timestamp', timeout=5)
+        if response.ok and float(response.text) < server_timestamp.value:
+            register(index)
+            running_server = False
+            server_process.terminate()
+            systray.title = f'{app_name}: Connected'
     except (requests.exceptions.ConnectionError, AssertionError):
         return
 
 
 def find_server():
-    global server_url
+    global running_server
 
-    systray.title = 'Common Clipboard: Not Connected'
-    server_url = ''
-    while run_app and not server_url:
-        for i in range(1, 255):
+    start_server()
+    register(device_index)
+    running_server = True
+    systray.title = f'{app_name}: Server Running'
+
+    for i in range(1, 255):
+        if i != device_index:
             test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
             test_url_thread.start()
-        time.sleep(finding_server_delay)
-    systray.title = 'Common Clipboard: Connected'
 
 
 def get_copied_data():
@@ -76,7 +85,7 @@ def detect_local_copy():
     global current_format
 
     new_data, new_format = get_copied_data()
-    if server_url and new_data != current_data:
+    if new_data != current_data:
         current_data = new_data
         current_format = new_format
 
@@ -90,44 +99,44 @@ def detect_server_change():
     global current_data
     global current_format
 
-    try:
-        headers = requests.head(server_url + '/clipboard')
-        if headers.ok and headers.headers['Data-Attached'] == 'True':
-            data_request = requests.get(server_url + '/clipboard')
-            data_format = type_to_format[data_request.headers['Data-Type']]
-            data = data_request.content.decode() if data_format == Format.TEXT else data_request.content
+    headers = requests.head(server_url + '/clipboard', timeout=2)
+    if headers.ok and headers.headers['Data-Attached'] == 'True':
+        data_request = requests.get(server_url + '/clipboard')
+        data_format = type_to_format[data_request.headers['Data-Type']]
+        data = data_request.content.decode() if data_format == Format.TEXT else data_request.content
 
-            clipboard.OpenClipboard()
-            clipboard.EmptyClipboard()
-            clipboard.SetClipboardData(data_format.value, data)
-            clipboard.CloseClipboard()
-            current_data, current_format = get_copied_data()
-    except requests.exceptions.ConnectionError:
-        find_server()
+        clipboard.OpenClipboard()
+        clipboard.EmptyClipboard()
+        clipboard.SetClipboardData(data_format.value, data)
+        clipboard.CloseClipboard()
+        current_data, current_format = get_copied_data()
 
 
-def listener():
+def mainloop():
+    find_server()
     while run_app:
-        if server_url:
+        try:
             detect_local_copy()
             detect_server_change()
+        except (requests.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError):
+            systray.title = f'{app_name}: Not Connected'
+            if run_app:
+                find_server()
         systray.update_menu()
         time.sleep(listener_delay)
 
 
-def start_server(toggle_variable=False):
+def start_server():
     global running_server
     global server_process
 
-    if toggle_variable:
-        running_server = not running_server
-
-    if running_server:
-        server_process = Process(target=run_server, args=(port, connected_devices,))
-        server_process.start()
-    else:
+    if server_process is not None:
         server_process.terminate()
-        server_process = None
+
+    connected_devices.clear()
+    running_server = True
+    server_process = Process(target=run_server, args=(port, connected_devices, server_timestamp,))
+    server_process.start()
 
 
 def close():
@@ -137,10 +146,8 @@ def close():
     if server_process is not None:
         server_process.terminate()
 
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
     with open(preferences_file, 'wb') as save_file:
-        pickle.dump([port, running_server], save_file)
+        pickle.dump(port, save_file)
 
     systray.stop()
     sys.exit(0)
@@ -153,16 +160,12 @@ def edit_port():
     new_port = port_dialog.port_number.get()
     if port_dialog.applied and new_port != port:
         port = new_port
-        if running_server and server_process is not None:
-            server_process.terminate()
-            connected_devices.clear()
-            start_server()
+        find_server()
 
 
 def get_menu_items():
     menu_items = (
         MenuItem(f'Port: {port}', Menu(MenuItem('Edit', lambda _: edit_port()))),
-        MenuItem('Run Server', lambda: start_server(True), checked=lambda _: running_server),
         MenuItem('View Connected Devices', Menu(lambda: (
             MenuItem(f"{name} ({ip})", None) for ip, name in connected_devices.get_devices()
         ))) if running_server else None,
@@ -174,31 +177,38 @@ def get_menu_items():
 if __name__ == '__main__':
     freeze_support()
 
-    finding_server_delay = 1
+    app_name = 'Common Clipboard'
     listener_delay = 0.3
 
     server_url = ''
     ipaddr = gethostbyname(gethostname())
-    base_ipaddr = '.'.join(ipaddr.split('.')[:-1])
+    split_ipaddr = ipaddr.split('.')
+    base_ipaddr = '.'.join(split_ipaddr[:-1])
+    device_index = int(split_ipaddr[-1])
 
     BaseManager.register('DeviceList', DeviceList)
     manager = BaseManager()
     manager.start()
     connected_devices = manager.DeviceList()
+    server_timestamp = Value('d', 0)
 
+    running_server = False
     server_process: Process = None
 
-    data_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'CommonClipboard')
+    try:
+        data_dir = os.path.join(os.getenv('LOCALAPPDATA'), app_name)
+    except TypeError:
+        data_dir = os.getcwd()
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
     preferences_file = os.path.join(data_dir, 'preferences.pickle')
     try:
         with open(preferences_file, 'rb') as preferences:
-            port, running_server = pickle.load(preferences)
+            port = pickle.load(preferences)
     except FileNotFoundError:
         port = 5000
-        running_server = False
-
-    if running_server:
-        start_server()
 
     current_data, current_format = get_copied_data()
 
@@ -206,10 +216,9 @@ if __name__ == '__main__':
     type_to_format = {v: k for k, v in format_to_type.items()}
 
     icon = Image.open('systray_icon.ico')
-    systray = Icon('Common Clipboard', icon=icon, title='Common Clipboard', menu=Menu(get_menu_items))
+    systray = Icon(app_name, icon=icon, title=app_name, menu=Menu(get_menu_items))
     systray.run_detached()
 
     run_app = True
 
-    find_server()
-    listener()
+    mainloop()

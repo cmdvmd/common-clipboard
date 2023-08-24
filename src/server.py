@@ -2,11 +2,17 @@
 File to handle server operations
 """
 
+import ntplib
 from flask import Flask, request, make_response, send_file
 from io import BytesIO
 from device_list import DeviceList
 
 app = Flask(__name__)
+
+
+@app.route('/timestamp', methods=['GET'])
+def get_timestamp():
+    return str(timestamp.value), 200
 
 
 @app.route('/register', methods=['POST'])
@@ -60,15 +66,21 @@ def update_clipboard():
         return str(e), 400
 
 
-def run_server(port, device_list):
+def run_server(port, device_list, t):
+    global timestamp
     global connected_devices
 
+    response = ntp_client.request('us.pool.ntp.org', version=3)
+    t.value = response.tx_timestamp
+    timestamp = t
     connected_devices = device_list
     app.run(host='0.0.0.0', port=port)
 
 
 unregistered_error = 'The requesting device is not registered to the server', 401
 
+ntp_client = ntplib.NTPClient()
 clipboard = b''
 data_type = 'text'
+timestamp = 0
 connected_devices = DeviceList()
