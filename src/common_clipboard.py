@@ -10,7 +10,7 @@ import os
 import pickle
 from socket import gethostbyname, gethostname
 from threading import Thread
-from multiprocessing import Process, freeze_support
+from multiprocessing import freeze_support, Value, Process
 from multiprocessing.managers import BaseManager
 from enum import Enum
 from pystray import Icon, Menu, MenuItem
@@ -26,43 +26,41 @@ class Format(Enum):
     IMAGE = clipboard.RegisterClipboardFormat('PNG')
 
 
-def test_server_ip(index):
+def register(index):
     global server_url
 
+    server_url = f'http://{base_ipaddr}.{index}:{port}'
+    requests.post(server_url + '/register', json={'name': gethostname()})
+
+
+def test_server_ip(index):
+    global server_url
+    global running_server
+
     try:
-        if not server_url:
-            tested_url = f'http://{base_ipaddr}.{index}:{port}'
-
-            response = requests.post(tested_url + '/register', json={'name': gethostname()}, timeout=1.25)
-            assert response.ok
-
-            server_url = tested_url
+        tested_url = f'http://{base_ipaddr}.{index}:{port}'
+        response = requests.get(tested_url + '/timestamp', timeout=5)
+        if response.ok and float(response.text) < server_timestamp.value:
+            register(index)
+            running_server = False
+            server_process.terminate()
+            systray.title = f'{app_name}: Connected'
     except (requests.exceptions.ConnectionError, AssertionError):
         return
 
 
 def find_server():
-    global server_url
     global running_server
 
-    systray.title = f'{app_name}: Not Connected'
     start_server()
+    register(device_index)
+    running_server = True
+    systray.title = f'{app_name}: Server Running'
 
-    server_url = ''
-    test_url_thread = None
     for i in range(1, 255):
         if i != device_index:
             test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
             test_url_thread.start()
-    test_url_thread.join()
-
-    if server_url:
-        running_server = False
-        server_process.terminate()
-        systray.title = f'{app_name}: Connected'
-    else:
-        test_server_ip(device_index)
-        systray.title = f'{app_name}: Server Running'
 
 
 def get_copied_data():
@@ -120,8 +118,10 @@ def mainloop():
         try:
             detect_local_copy()
             detect_server_change()
-        except requests.exceptions.ConnectionError:
-            find_server()
+        except (requests.exceptions.ConnectionError, ConnectionRefusedError):
+            systray.title = f'{app_name}: Not Connected'
+            if run_app:
+                find_server()
         systray.update_menu()
         time.sleep(listener_delay)
 
@@ -134,7 +134,7 @@ def start_server():
         server_process.terminate()
 
     running_server = True
-    server_process = Process(target=run_server, args=(port, connected_devices,))
+    server_process = Process(target=run_server, args=(port, connected_devices, server_timestamp,))
     server_process.start()
 
 
@@ -145,8 +145,6 @@ def close():
     if server_process is not None:
         server_process.terminate()
 
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
     with open(preferences_file, 'wb') as save_file:
         pickle.dump(port, save_file)
 
@@ -184,14 +182,16 @@ if __name__ == '__main__':
     listener_delay = 0.3
 
     server_url = ''
-    ipaddr = gethostbyname(gethostname()).split('.')
-    base_ipaddr = '.'.join(ipaddr[:-1])
-    device_index = int(ipaddr[-1])
+    ipaddr = gethostbyname(gethostname())
+    split_ipaddr = ipaddr.split('.')
+    base_ipaddr = '.'.join(split_ipaddr[:-1])
+    device_index = int(split_ipaddr[-1])
 
     BaseManager.register('DeviceList', DeviceList)
     manager = BaseManager()
     manager.start()
     connected_devices = manager.DeviceList()
+    server_timestamp = Value('d', 0)
 
     running_server = False
     server_process: Process = None
@@ -200,6 +200,10 @@ if __name__ == '__main__':
         data_dir = os.path.join(os.getenv('LOCALAPPDATA'), app_name)
     except TypeError:
         data_dir = os.getcwd()
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
     preferences_file = os.path.join(data_dir, 'preferences.pickle')
     try:
         with open(preferences_file, 'rb') as preferences:
