@@ -54,7 +54,6 @@ def find_server():
 
     start_server()
     register(device_index)
-    running_server = True
     systray.title = f'{app_name}: Server Running'
 
     for i in range(1, 255):
@@ -118,12 +117,15 @@ def mainloop():
         try:
             detect_local_copy()
             detect_server_change()
-        except (requests.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError):
+        except requests.exceptions.ConnectionError:
             systray.title = f'{app_name}: Not Connected'
             if run_app:
                 find_server()
-        systray.update_menu()
-        time.sleep(listener_delay)
+        except TimeoutError:
+            continue
+        finally:
+            systray.update_menu()
+            time.sleep(listener_delay)
 
 
 def start_server():
@@ -220,5 +222,4 @@ if __name__ == '__main__':
     systray.run_detached()
 
     run_app = True
-
     mainloop()
