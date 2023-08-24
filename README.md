@@ -19,7 +19,7 @@ transfer happens in the background, meaning the only commands you need to know a
 
 > **Note:** Common Clipboard requires at least one Windows device on the local network to function
 
-1. Ensure the Common Clipboard shortcut is running on the same port as the Windows server
+1. Ensure the Common Clipboard shortcut is running on the same port as the Windows application
     * The port number can be changed in the code of the shortcut
 
 2. Run the Common Clipboard shortcut on all desired iOS/iPadOS devices on the local network
@@ -38,8 +38,8 @@ transfer happens in the background, meaning the only commands you need to know a
 1. Launch the Common Clipboard application on all desired Windows devices on the local network
     * The application will automatically connect to the network and begin sharing clipboard data
 
-2. Edit the port number from the system tray to match the port number of the server (if necessary). The port number can
-   also be changed while the server is running
+2. Edit the port number from the system tray to match the port number of the application running the server (if
+   necessary). The port number can also be changed while the server is running
     * Changing the port number is likely only necessary if multiple users are using Common Clipboard on the same network
 
    ![Editing Port Demo](static/edit_port.gif)
