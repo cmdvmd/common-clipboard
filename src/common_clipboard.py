@@ -121,7 +121,7 @@ def mainloop():
             systray.title = f'{app_name}: Not Connected'
             if run_app:
                 find_server()
-        except TimeoutError:
+        except (BaseException, TimeoutError, OSError):
             continue
         finally:
             systray.update_menu()
