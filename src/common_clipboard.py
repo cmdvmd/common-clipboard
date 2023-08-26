@@ -104,27 +104,29 @@ def detect_server_change():
         data_format = type_to_format[data_request.headers['Data-Type']]
         data = data_request.content.decode() if data_format == Format.TEXT else data_request.content
 
-        clipboard.OpenClipboard()
-        clipboard.EmptyClipboard()
-        clipboard.SetClipboardData(data_format.value, data)
-        clipboard.CloseClipboard()
-        current_data, current_format = get_copied_data()
+        try:
+            clipboard.OpenClipboard()
+            clipboard.EmptyClipboard()
+            clipboard.SetClipboardData(data_format.value, data)
+            clipboard.CloseClipboard()
+            current_data, current_format = get_copied_data()
+        except BaseException:
+            return
 
 
 def mainloop():
     find_server()
     while run_app:
         try:
-            detect_local_copy()
             detect_server_change()
-        except requests.exceptions.ConnectionError:
+            detect_local_copy()
+        except (requests.exceptions.ConnectionError, TimeoutError, OSError):
             systray.title = f'{app_name}: Not Connected'
             if run_app:
                 find_server()
-        except (BaseException, TimeoutError, OSError):
-            continue
         finally:
-            systray.update_menu()
+            if running_server:
+                systray.update_menu()
             time.sleep(listener_delay)
 
 

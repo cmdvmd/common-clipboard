@@ -7,7 +7,7 @@ if __name__ == '__main__':
         name='common_clipboard',
         description='Common Clipboard',
         author='cmdvmd',
-        version='1.1b0',
+        version='1.1b1',
         options={
             'build_exe': {
                 'packages': [
