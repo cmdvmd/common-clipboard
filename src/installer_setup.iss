@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Common Clipboard"
-#define MyAppVersion "1.1b0"
+#define MyAppVersion "1.1b1"
 #define MyAppPublisher "cmdvmd"
 #define MyAppURL "https://github.com/cmdvmd/common-clipboard"
 #define MyAppExeName "common_clipboard.exe"

@@ -5,6 +5,7 @@ File to handle server operations
 import ntplib
 from flask import Flask, request, make_response, send_file
 from io import BytesIO
+from multiprocessing import Value
 from device_list import DeviceList
 
 app = Flask(__name__)
@@ -82,5 +83,5 @@ unregistered_error = 'The requesting device is not registered to the server', 40
 ntp_client = ntplib.NTPClient()
 clipboard = b''
 data_type = 'text'
-timestamp = 0
+timestamp = Value('d')
 connected_devices = DeviceList()

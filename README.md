@@ -66,7 +66,11 @@ transfer happens in the background, meaning the only commands you need to know a
 Download the latest version of the Common Clipboard application
 from [releases](https://github.com/cmdvmd/common-clipboard/releases)
 
+> **Note:** Make sure to allow the application to access the internet through your antivirus
+
 ### iOS
 
 Download the latest version of the Common Clipboard shortcut from [RoutineHub](https://routinehub.co/shortcut/16222/) as
 well as the [Scriptable app](https://apps.apple.com/app/id1405459188).
+
+> **Note:** Make sure to allow the Scriptable app to access the local network in Settings
