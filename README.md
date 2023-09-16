@@ -23,7 +23,10 @@ transfer happens in the background, meaning the only commands you need to know a
     * The port number can be changed in the code of the shortcut
 
 2. Run the Common Clipboard shortcut on all desired iOS/iPadOS devices on the local network
-    * The shortcut will automatically connect to the network and begin sharing clipboard data
+    * On a private network, the shortcut will automatically connect to the network and begin sharing clipboard data
+    * On a public network, the shortcut will prompt you to enter the IP Address of the Windows device running the
+      server. This can be found by viewing the connected devices on the device running the server (
+      see [Windows Usage](#Windows))
     * You may be repeatedly asked for permission to send data after copying. This is a security feature by Apple and
       cannot be turned off. Simply click "Always Allow" when prompted
 

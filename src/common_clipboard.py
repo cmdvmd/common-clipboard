@@ -41,12 +41,21 @@ def test_server_ip(index):
         tested_url = f'http://{base_ipaddr}.{index}:{port}'
         response = requests.get(tested_url + '/timestamp', timeout=5)
         if response.ok and float(response.text) < server_timestamp.value:
+            print('here', tested_url)
             register(index)
             running_server = False
             server_process.terminate()
             systray.title = f'{app_name}: Connected'
     except (requests.exceptions.ConnectionError, AssertionError):
         return
+
+
+def generate_ips():
+    for i in range(1, 255):
+        for j in range(1, 255):
+            if j != device_index:
+                test_url_thread = Thread(target=test_server_ip, args=(f'{i}.{j}',), daemon=True)
+                test_url_thread.start()
 
 
 def find_server():
@@ -56,10 +65,8 @@ def find_server():
     register(device_index)
     systray.title = f'{app_name}: Server Running'
 
-    for i in range(1, 255):
-        if i != device_index:
-            test_url_thread = Thread(target=test_server_ip, args=(i,), daemon=True)
-            test_url_thread.start()
+    generator_thread = Thread(target=generate_ips)
+    generator_thread.start()
 
 
 def get_copied_data():
