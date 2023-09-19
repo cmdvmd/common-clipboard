@@ -26,10 +26,10 @@ class Format(Enum):
     IMAGE = clipboard.RegisterClipboardFormat('PNG')
 
 
-def register(index):
+def register(address):
     global server_url
 
-    server_url = f'http://{base_ipaddr}.{index}:{port}'
+    server_url = f'http://{address}:{port}'
     requests.post(server_url + '/register', json={'name': gethostname()})
 
 
@@ -41,8 +41,7 @@ def test_server_ip(index):
         tested_url = f'http://{base_ipaddr}.{index}:{port}'
         response = requests.get(tested_url + '/timestamp', timeout=5)
         if response.ok and float(response.text) < server_timestamp.value:
-            print('here', tested_url)
-            register(index)
+            register(base_ipaddr + index)
             running_server = False
             server_process.terminate()
             systray.title = f'{app_name}: Connected'
@@ -51,18 +50,19 @@ def test_server_ip(index):
 
 
 def generate_ips():
-    for i in range(1, 255):
-        for j in range(1, 255):
-            if j != device_index:
-                test_url_thread = Thread(target=test_server_ip, args=(f'{i}.{j}',), daemon=True)
-                test_url_thread.start()
+    for i in range(0, 255):
+        for j in range(0, 255):
+            for k in range(0, 255):
+                if not server_url and i != split_ipaddr[1] and j != split_ipaddr[2] and k != split_ipaddr[3]:
+                    test_url_thread = Thread(target=test_server_ip, args=(f'{i}.{j}.{k}',), daemon=True)
+                    test_url_thread.start()
 
 
 def find_server():
     global running_server
 
     start_server()
-    register(device_index)
+    register(ipaddr)
     systray.title = f'{app_name}: Server Running'
 
     generator_thread = Thread(target=generate_ips)
@@ -193,9 +193,8 @@ if __name__ == '__main__':
 
     server_url = ''
     ipaddr = gethostbyname(gethostname())
-    split_ipaddr = ipaddr.split('.')
-    base_ipaddr = '.'.join(split_ipaddr[:-1])
-    device_index = int(split_ipaddr[-1])
+    split_ipaddr = [int(num) for num in ipaddr.split('.')]
+    base_ipaddr = str(split_ipaddr[0])
 
     BaseManager.register('DeviceList', DeviceList)
     manager = BaseManager()
