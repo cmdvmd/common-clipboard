@@ -41,10 +41,10 @@ def test_server_ip(index):
         tested_url = f'http://{base_ipaddr}.{index}:{port}'
         response = requests.get(tested_url + '/timestamp', timeout=5)
         if response.ok and float(response.text) < server_timestamp.value:
-            register(base_ipaddr + index)
+            register(base_ipaddr + '.' + index)
             running_server = False
             server_process.terminate()
-            systray.title = f'{app_name}: Connected'
+            systray.title = f'{APP_NAME}: Connected'
     except (requests.exceptions.ConnectionError, AssertionError):
         return
 
@@ -53,7 +53,7 @@ def generate_ips():
     for i in range(0, 255):
         for j in range(0, 255):
             for k in range(0, 255):
-                if not server_url and i != split_ipaddr[1] and j != split_ipaddr[2] and k != split_ipaddr[3]:
+                if i != int(split_ipaddr[1]) or j != int(split_ipaddr[2]) or k != int(split_ipaddr[3]):
                     test_url_thread = Thread(target=test_server_ip, args=(f'{i}.{j}.{k}',), daemon=True)
                     test_url_thread.start()
 
@@ -66,7 +66,7 @@ def find_server():
         requests.get(TEST_INTERNET_URL)
         start_server()
         register(ipaddr)
-        systray.title = f'{app_name}: Server Running'
+        systray.title = f'{APP_NAME}: Server Running'
 
         generator_thread = Thread(target=generate_ips)
         generator_thread.start()
@@ -132,14 +132,14 @@ def mainloop():
             requests.get(TEST_INTERNET_URL)
             detect_server_change()
             detect_local_copy()
-        except (requests.exceptions.ConnectionError, TimeoutError, OSError):
-            systray.title = f'{app_name}: Not Connected'
+        except (requests.exceptions.ConnectionError, TimeoutError, OSError) as e:
+            systray.title = f'{APP_NAME}: Not Connected'
             if run_app:
                 find_server()
         finally:
             if running_server:
                 systray.update_menu()
-            time.sleep(listener_delay)
+            time.sleep(LISTENER_DELAY)
 
 
 def start_server():
@@ -191,12 +191,11 @@ def get_menu_items():
 
 
 if __name__ == '__main__':
-    TEST_INTERNET_URL = 'https://8.8.8.8'
-
     freeze_support()
 
-    app_name = 'Common Clipboard'
-    listener_delay = 0.3
+    APP_NAME = 'Common Clipboard'
+    LISTENER_DELAY = 0.3
+    TEST_INTERNET_URL = 'https://8.8.8.8'
 
     server_url = ''
     ipaddr = gethostbyname(gethostname())
@@ -213,7 +212,7 @@ if __name__ == '__main__':
     server_process: Process = None
 
     try:
-        data_dir = os.path.join(os.getenv('LOCALAPPDATA'), app_name)
+        data_dir = os.path.join(os.getenv('LOCALAPPDATA'), APP_NAME)
     except TypeError:
         data_dir = os.getcwd()
 
@@ -233,7 +232,7 @@ if __name__ == '__main__':
     type_to_format = {v: k for k, v in format_to_type.items()}
 
     icon = Image.open('systray_icon.ico')
-    systray = Icon(app_name, icon=icon, title=app_name, menu=Menu(get_menu_items))
+    systray = Icon(APP_NAME, icon=icon, title=APP_NAME, menu=Menu(get_menu_items))
     systray.run_detached()
 
     run_app = True
