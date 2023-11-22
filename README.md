@@ -31,6 +31,7 @@ transfer happens in the background, meaning the only commands you need to know a
       cannot be turned off. Simply click "Always Allow" when prompted
 
 3. Close the Shortcuts app (press the home button or swipe up)
+    * Ensure Background App Refresh is enabled for the Shortcuts app in Settings
     * **DO NOT** quit the app by swiping it away from the menu. This will stop the shortcut
 
 4. To quit the shortcut, either quit the Shortcuts app, or enter the Shortcuts app and click the loading wheel in the
