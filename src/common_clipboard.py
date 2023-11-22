@@ -8,7 +8,7 @@ import win32clipboard as clipboard
 import sys
 import os
 import pickle
-from socket import gethostbyname, gethostname
+from socket import gethostbyname, gethostname, gaierror
 from threading import Thread
 from multiprocessing import freeze_support, Value, Process
 from multiprocessing.managers import BaseManager
@@ -60,13 +60,18 @@ def generate_ips():
 
 def find_server():
     global running_server
+    global server_url
 
-    start_server()
-    register(ipaddr)
-    systray.title = f'{app_name}: Server Running'
+    try:
+        requests.get(TEST_INTERNET_URL)
+        start_server()
+        register(ipaddr)
+        systray.title = f'{app_name}: Server Running'
 
-    generator_thread = Thread(target=generate_ips)
-    generator_thread.start()
+        generator_thread = Thread(target=generate_ips)
+        generator_thread.start()
+    except requests.exceptions.ConnectionError:
+        server_url = ''
 
 
 def get_copied_data():
@@ -122,9 +127,9 @@ def detect_server_change():
 
 
 def mainloop():
-    find_server()
     while run_app:
         try:
+            requests.get(TEST_INTERNET_URL)
             detect_server_change()
             detect_local_copy()
         except (requests.exceptions.ConnectionError, TimeoutError, OSError):
@@ -186,6 +191,8 @@ def get_menu_items():
 
 
 if __name__ == '__main__':
+    TEST_INTERNET_URL = 'https://8.8.8.8'
+
     freeze_support()
 
     app_name = 'Common Clipboard'
