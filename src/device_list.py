@@ -6,7 +6,7 @@ import time
 
 
 class DeviceList:
-    def __init__(self, timeout=5):
+    def __init__(self, timeout=30):
         self._devices = {}
         self.timeout = timeout
 
